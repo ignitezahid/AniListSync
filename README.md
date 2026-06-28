@@ -90,28 +90,6 @@ When you run the app, you will see:
 6. Exit
 ```
 
-## 📦 Safe To Upload
-
-This repo ignores private/runtime files:
-
-```text
-config.py
-data/
-backups/
-logs/
-telegram_session.session
-missing_anilist.json
-state.json
-```
-
-Check before pushing:
-
-```bash
-git status --ignored --short
-```
-
-Your private files should show with `!!`.
-
 ## 🔒 Security
 
 Keep these private:
