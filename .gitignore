@@ -1,0 +1,26 @@
+# Secrets and local credentials
+/config.py
+*.session
+*.session-journal
+
+# Runtime data
+data/
+backups/
+exports/
+logs/
+state.json
+missing_anilist.json
+failed_titles.txt
+main_old.py
+test_file_util.py
+
+# Python cache and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Agent/editor metadata
+.agents/
+.codex/
+.vscode/
+.idea/
