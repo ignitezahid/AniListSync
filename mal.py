@@ -117,7 +117,7 @@ def get_access_token():
     return tokens["access_token"]
 
 
-def get_completed_mal_ids():
+def get_completed_mal_anime():
     access_token = get_access_token()
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -125,22 +125,53 @@ def get_completed_mal_ids():
     url = (
         "https://api.myanimelist.net/v2/users/@me/"
         "animelist"
-        "?fields=list_status"
+        "?fields=list_status,num_episodes"
         "&limit=1000"
     )
-    ids = set()
+    anime_list = []
+    seen_ids = set()
+
     while url:
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print(response.text)
-            return ids
+            return anime_list
+
         data = response.json()
         for anime in data["data"]:
-            ids.add(anime["node"]["id"])
+            node = anime.get("node", {})
+            list_status = anime.get("list_status", {})
+            mal_id = node.get("id")
+
+            if mal_id is None:
+                continue
+
+            if mal_id in seen_ids:
+                continue
+
+            seen_ids.add(mal_id)
+            anime_list.append({
+                "id": None,
+                "idMal": mal_id,
+                "title": node.get("title") or "Unknown title",
+                "episodes": node.get("num_episodes"),
+                "status": list_status.get("status"),
+                "progress": list_status.get("num_episodes_watched"),
+            })
+
         url = None
         if "paging" in data:
             url = data["paging"].get("next")
-    return ids
+
+    return anime_list
+
+
+def get_completed_mal_ids():
+    return {
+        anime["idMal"]
+        for anime in get_completed_mal_anime()
+        if anime.get("idMal") is not None
+    }
 
 
 def get_list_status(mal_id):

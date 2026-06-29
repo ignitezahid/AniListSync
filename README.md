@@ -85,7 +85,7 @@ When you run the app, you will see:
 1. Sync       Add Telegram Saved Messages to AniList/MAL
 2. Compare    Find missing or not-found anime
 3. Repair     Fix missing or not-found matches
-4. Export     Coming soon
+4. Data Center Export, import, backup, and restore app data
 5. Statistics View stats
 6. Exit
 ```

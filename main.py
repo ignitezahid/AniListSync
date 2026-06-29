@@ -46,7 +46,9 @@ while True:
 
     elif choice == "4":
 
-        print("\nExport Mode (Coming Soon)\n")
+        from modes.export import data_center
+
+        client.loop.run_until_complete(data_center())
 
     elif choice == "5":
 

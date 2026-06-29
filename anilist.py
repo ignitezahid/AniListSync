@@ -641,7 +641,7 @@ def get_media_with_relations(media_id):
     return media, related
 
 
-def get_completed_ids():
+def get_completed_anime():
     viewer_query = """
     query {
       Viewer {
@@ -662,6 +662,18 @@ def get_completed_ids():
         lists {
           entries {
             mediaId
+            status
+            progress
+            media {
+              id
+              idMal
+              episodes
+              title {
+                english
+                romaji
+                native
+              }
+            }
           }
         }
       }
@@ -674,13 +686,45 @@ def get_completed_ids():
     )
     if "errors" in collection_data:
         print(collection_data["errors"])
-        return set()
+        return []
 
-    ids = set()
+    anime = []
+    seen_ids = set()
+
     for anime_list in collection_data["data"]["MediaListCollection"]["lists"]:
         for entry in anime_list["entries"]:
-            ids.add(entry["mediaId"])
-    return ids
+            media = entry.get("media") or {}
+            media_id = media.get("id") or entry.get("mediaId")
+
+            if media_id in seen_ids:
+                continue
+
+            seen_ids.add(media_id)
+            title = media.get("title") or {}
+
+            anime.append({
+                "id": media_id,
+                "idMal": media.get("idMal"),
+                "title": (
+                    title.get("english")
+                    or title.get("romaji")
+                    or title.get("native")
+                    or "Unknown title"
+                ),
+                "episodes": media.get("episodes"),
+                "status": entry.get("status"),
+                "progress": entry.get("progress"),
+            })
+
+    return anime
+
+
+def get_completed_ids():
+    return {
+        anime["id"]
+        for anime in get_completed_anime()
+        if anime.get("id") is not None
+    }
 
 
 def find_similar_aliases(title, limit=5):
