@@ -7,7 +7,7 @@ Sync anime titles from Telegram Saved Messages to AniList and MyAnimeList.
 `Python` `AniList` `MyAnimeList` `Telegram`
 
 ```text
-Anime Library Manager v2.0.0
+Anime Library Manager v2.1.0
 by ignitezahid
 ```
 
