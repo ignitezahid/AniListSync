@@ -53,7 +53,7 @@ The built-in **Tools** menu includes:
 
 | Main Menu                 | Sync                      |
 | ------------------------- | ------------------------- |
-| ![](docs/images/menu.png) | ![](docs/images/sync.png) |
+| ![](docs/menu.png) | ![](docs/sync.png) |
 
 
 ---
