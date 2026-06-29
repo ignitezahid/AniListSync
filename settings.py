@@ -14,14 +14,35 @@ DEFAULT_SETTINGS = {
     "auto_backup": True,
     "default_status": "COMPLETED",
     "mal_default_status": "completed",
+
+    # New defaults (added from data/settings.json)
+    "enable_anilist": True,
+    "enable_mal": True,
+    "resume_import": True,
+    "retry_failed": True,
+    "auto_learn_aliases": True,
+    "franchise_sync": True,
+    "use_search_cache": True,
+    "fuzzy_matching": True,
+    "interactive_search": True,
+    "confirm_before_sync": False,
 }
 
 
+
 def load_settings():
-    return load_json(
+    settings = load_json(
         SETTINGS_FILE,
         DEFAULT_SETTINGS
     )
+
+    # Ensure new keys exist even for older settings.json files
+    if isinstance(settings, dict):
+        for key, value in DEFAULT_SETTINGS.items():
+            settings.setdefault(key, value)
+
+    return settings
+
 
 
 def save_settings(settings):
@@ -31,5 +52,20 @@ def save_settings(settings):
     )
 
 
+def save():
+    save_settings(SETTINGS)
+
+
+
 SETTINGS = load_settings()
+
+
+def get_setting(key, default=None):
+    return SETTINGS.get(key, default)
+
+
+def set_setting(key, value):
+    SETTINGS[key] = value
+    save_settings(SETTINGS)
+
 

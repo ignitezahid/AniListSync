@@ -1,115 +1,238 @@
-<div align="center">
+# 🎌 AniListSync
 
-# AniListSync
+> **Keep your AniList and MyAnimeList libraries synchronized directly from your Telegram Saved Messages.**
 
-Sync anime titles from Telegram Saved Messages to AniList and MyAnimeList.
+AniListSync is a feature-rich command-line anime library manager that scans your Telegram Saved Messages, intelligently matches anime titles, and synchronizes them with **AniList** and **MyAnimeList**.
 
-`Python` `AniList` `MyAnimeList` `Telegram`
-
-```text
-Anime Library Manager v2.1.0
-by ignitezahid
-```
-
-</div>
+Designed for large anime libraries, it includes smart search, franchise support, repair utilities, statistics, alias learning, and comprehensive data management.
 
 ---
 
 ## ✨ Features
 
-| Feature | What It Does |
-| --- | --- |
-| Sync | Reads anime titles from Telegram Saved Messages |
-| AniList + MAL | Adds matched anime to both services |
-| Alias Manager | Learns and edits title aliases |
-| Repair Mode | Fixes missing or not-found anime |
-| Franchise Manager | Lets you add related anime together |
+### 🔄 Synchronization
 
-## 🚀 Quick Start
+* Sync Telegram Saved Messages to **AniList**
+* Sync Telegram Saved Messages to **MyAnimeList**
+* Resume interrupted imports
+* Retry failed imports
+* Skip anime already in your library
+* Franchise Sync (add related entries together)
 
-- [ ] Install Python
-- [ ] Clone/download this repo
-- [ ] Install dependencies
-- [ ] Create `config.py`
-- [ ] Add your API keys
-- [ ] Run `main.py`
+### 🔍 Smart Matching
+
+* Interactive search
+* Fuzzy title matching
+* Automatic alias learning
+* Search cache
+* Manual alias management
+* Intelligent retry queue
+
+### 🛠 Library Management
+
+* Compare Telegram, AniList and MyAnimeList libraries
+* Repair missing or unmatched anime
+* Statistics dashboard
+* Missing anime reports
+
+### 🧰 Tools
+
+The built-in **Tools** menu includes:
+
+* Export
+* Import
+* Backup
+* Restore
+* Alias Manager
+* Search Cache
+* Settings
+
+---
+
+# 📸 Preview
+
+| Main Menu                 | Sync                      |
+| ------------------------- | ------------------------- |
+| ![](docs/images/menu.png) | ![](docs/images/sync.png) |
+
+
+---
+
+# 🚀 Installation
+
+Clone the repository:
 
 ```bash
-git clone YOUR_REPO_URL
+git clone https://github.com/ignitezahid/AniListSync.git
 cd AniListSync
-pip install -r requirements.txt
-copy config.example.py config.py
-python main.py
 ```
 
-Use this on macOS/Linux instead of `copy`:
+Install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create your configuration file.
+
+### Windows
+
+```bash
+copy config.example.py config.py
+```
+
+### Linux / macOS
 
 ```bash
 cp config.example.py config.py
 ```
 
-## 🔑 Add Your Keys
+Edit `config.py` and add your API credentials.
 
-Open `config.py` and replace the example values:
+Run the application:
 
-```python
-API_ID = 123456
-API_HASH = "your_telegram_api_hash"
-MAL_CLIENT_ID = "your_mal_client_id"
-MAL_CLIENT_SECRET = "your_mal_client_secret"
-ANILIST_TOKEN = "your_anilist_access_token"
+```bash
+python main.py
 ```
 
-Do not edit your keys into `config.example.py`. Keep real keys only in `config.py`.
+---
 
-## 🔗 Get API Keys
+# 🔑 Required API Keys
 
-| Service | What You Need | Link |
-| --- | --- | --- |
-| Telegram | `API_ID`, `API_HASH` | https://my.telegram.org/apps |
-| AniList | `ANILIST_TOKEN` | https://docs.anilist.co/guide/auth/ |
-| MyAnimeList | `MAL_CLIENT_ID`, `MAL_CLIENT_SECRET` | https://myanimelist.net/apiconfig |
-| MyAnimeList Docs | API reference | https://myanimelist.net/apiconfig/references/api/v2 |
+| Service     | Required                  |
+| ----------- | ------------------------- |
+| Telegram    | API ID & API Hash         |
+| AniList     | Access Token              |
+| MyAnimeList | Client ID & Client Secret |
 
-Notes:
+Useful links:
 
-- Telegram sends the login code inside Telegram.
-- `API_ID` is a number, so do not put it in quotes.
-- The other keys are text, so keep them in quotes.
+* Telegram → https://my.telegram.org/apps
+* AniList → https://docs.anilist.co/guide/auth/
+* MyAnimeList → https://myanimelist.net/apiconfig
 
-## 🧭 Menu
+---
 
-When you run the app, you will see:
+# 📋 Main Menu
 
 ```text
-1. Sync       Add Telegram Saved Messages to AniList/MAL
-2. Compare    Find missing or not-found anime
-3. Repair     Fix missing or not-found matches
-4. Data Center Export, import, backup, and restore app data
-5. Statistics View stats
+1. Sync
+2. Compare
+3. Repair
+4. Tools
+5. Statistics
 6. Exit
 ```
 
-## 🔒 Security
+---
 
-Keep these private:
+# ⚙️ Settings
+
+AniListSync includes a built-in settings editor.
+
+### Basic Settings
+
+* AniList Sync
+* MyAnimeList Sync
+* Resume Imports
+* Retry Failed Anime
+* Auto Learn Aliases
+* Franchise Sync
+* Search Cache
+* Interactive Search
+* Automatic Backup
+
+### Advanced Settings
+
+* Search Threshold
+* Maximum Search Results
+* Maximum Retries
+* AniList Page Size
+* Stop After
+* Stop After Existing
+* Default Library Status
+* Debug Mode
+
+---
+
+# 📁 Project Structure
 
 ```text
-API_HASH
-MAL_CLIENT_SECRET
-ANILIST_TOKEN
+AniListSync/
+
+├── backups/
+├── data/
+├── docs/
+├── exports/
+├── logs/
+├── modes/
+├── utils/
+
+├── anilist.py
+├── mal.py
+├── settings.py
+├── sync.py
+├── menu.py
+├── main.py
+└── version.py
+```
+
+---
+
+# 🗺️ Roadmap
+
+### Version 2.3
+
+* [ ] Rich terminal interface
+* [ ] Cache Manager
+* [ ] AniList ↔ MyAnimeList comparison
+* [ ] Better export formats
+
+### Version 2.4
+
+* [ ] Duplicate alias detection
+* [ ] Improved statistics
+* [ ] Batch operations
+
+### Version 3.0
+
+* [ ] Desktop GUI
+* [ ] Plugin system
+* [ ] Additional anime services
+
+---
+
+# 🔒 Security
+
+Never commit these files:
+
+```text
+config.py
 telegram_session.session
+telegram_session.session-journal
 data/mal_tokens.json
 ```
 
-If you accidentally upload a secret, delete it from GitHub and regenerate it.
+---
 
-## 🛠️ Troubleshooting
+# 🤝 Contributing
 
-| Problem | Fix |
-| --- | --- |
-| `python` not found | Try `py main.py` or reinstall Python with PATH enabled |
-| Missing packages | Run `pip install -r requirements.txt` |
-| `config.py` missing | Copy `config.example.py` to `config.py` |
-| Telegram login stuck | Delete `telegram_session.session` and log in again |
-| Old missing anime still appears | Rerun Compare Mode; `missing_anilist.json` is only a saved report |
+Contributions, bug reports, and feature requests are welcome.
+
+If you encounter a bug or have an idea for a new feature, feel free to open an Issue or submit a Pull Request.
+
+---
+
+# 📜 License
+
+MIT License
+
+---
+
+<div align="center">
+
+Made with ❤️ by **ignitezahid**
+
+If you find AniListSync useful, consider giving the repository a ⭐.
+
+</div>

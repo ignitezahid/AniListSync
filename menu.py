@@ -17,7 +17,7 @@ def show_menu():
     print("1. Sync")
     print("2. Compare")
     print("3. Repair")
-    print("4. Data Center")
+    print("4. Tools")
     print("5. Statistics")
     print("6. Exit")
     print()

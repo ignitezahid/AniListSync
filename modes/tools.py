@@ -17,7 +17,144 @@ from utils.constants import (
 from utils.file_utils import data_file, load_json, save_json
 
 
+SETTING_LABELS = {
+    "enable_anilist": "Enable AniList Sync",
+    "enable_mal": "Enable MyAnimeList Sync",
+    "resume_import": "Resume Imports",
+    "retry_failed": "Retry Failed Anime",
+    "auto_learn_aliases": "Auto Learn Aliases",
+    "franchise_sync": "Franchise Sync",
+    "use_search_cache": "Use Search Cache",
+    "fuzzy_matching": "Fuzzy Matching",
+    "interactive_search": "Interactive Search",
+    "auto_backup": "Automatic Backup",
+    "confirm_before_sync": "Confirm Before Sync",
+
+    # Non-menu/common settings (kept for backwards compatibility)
+    "interactive_sync": "Interactive Search",
+    "debug": "Debug Mode",
+    "search_threshold": "Search Similarity Threshold",
+    "search_results": "Maximum Search Results",
+    "max_retries": "Maximum Retries",
+    "stop_after": "Stop After",
+    "stop_after_existing": "Stop After Existing",
+    "anilist_per_page": "AniList Page Size",
+    "default_status": "AniList Default Status",
+    "mal_default_status": "MAL Default Status",
+}
+
+
+# Settings menu definition (grouped) to avoid dumping every key with enumerate/print.
+# Format: [(group_title, [(setting_key, setting_label), ...]), ...]
+SETTINGS_MENU = [
+
+    (
+        "Synchronization",
+        [
+            ("enable_anilist", "Enable AniList Sync"),
+            ("enable_mal", "Enable MyAnimeList Sync"),
+            ("resume_import", "Resume Imports"),
+            ("retry_failed", "Retry Failed Anime"),
+            ("auto_learn_aliases", "Auto Learn Aliases"),
+            ("franchise_sync", "Franchise Sync"),
+        ],
+    ),
+
+    (
+        "Search",
+        [
+            ("use_cache", "Use Search Cache"),
+            ("fuzzy_matching", "Fuzzy Matching"),
+            ("interactive_search", "Interactive Search"),
+        ],
+    ),
+
+    (
+        "Backup",
+        [
+            ("auto_backup", "Automatic Backup"),
+        ],
+    ),
+
+    (
+        "User Interface",
+        [
+            ("confirm_before_sync", "Confirm Before Sync"),
+        ],
+    ),
+
+    (
+        "Advanced",
+        [
+            ("debug", "Debug Mode"),
+            ("search_threshold", "Search Threshold"),
+            ("search_results", "Maximum Search Results"),
+            ("max_retries", "Maximum Retries"),
+            ("anilist_per_page", "AniList Page Size"),
+            ("stop_after", "Stop After"),
+            ("stop_after_existing", "Stop After Existing"),
+            ("default_status", "AniList Default Status"),
+            ("mal_default_status", "MAL Default Status"),
+        ],
+    ),
+]
+
+
+
+# BASIC_SETTINGS must be right below SETTINGS_MENU.
+BASIC_SETTINGS = {
+    "enable_anilist",
+    "enable_mal",
+    "resume_import",
+    "retry_failed",
+    "auto_learn_aliases",
+    "franchise_sync",
+    "use_cache",
+    "fuzzy_matching",
+    "interactive_search",
+    "auto_backup",
+    "confirm_before_sync",
+}
+
+ADVANCED_SETTINGS = {
+    "debug",
+    "search_threshold",
+    "search_results",
+    "max_retries",
+    "anilist_per_page",
+    "stop_after",
+    "stop_after_existing",
+    "default_status",
+    "mal_default_status",
+}
+
+
+
+# Map flat setting keys to their top-level section in data/settings.json
+SETTINGS_KEY_TO_SECTION = {
+    # sync
+    "enable_anilist": "sync",
+    "enable_mal": "sync",
+    "resume_import": "sync",
+    "retry_failed": "sync",
+    "auto_learn_aliases": "sync",
+    "franchise_sync": "sync",
+
+    # search
+    "use_search_cache": "search",
+    "fuzzy_matching": "search",
+    "interactive_search": "search",
+
+    # backup
+    "auto_backup": "backup",
+
+    # ui
+    "confirm_before_sync": "ui",
+}
+
+
 EXPORT_PATH = Path(EXPORT_DIR)
+
 DATA_FILES = [
     ALIASES_FILE,
     CACHE_FILE,
@@ -102,8 +239,18 @@ def choose_format():
             return "json"
         if choice == "2":
             return "csv"
+        if choice == "1":
+            settings_editor("basic")
+            continue
+
+        if choice == "2":
+            settings_editor("advanced")
+            continue
+
         if choice == "3":
-            return "txt"
+            return
+
+
         if choice == "4":
             return "md"
         if choice == "5":
@@ -131,20 +278,198 @@ def export_menu():
     return input("Choice: ").strip()
 
 
+def settings_home():
+    while True:
+        print()
+        print("=" * 40)
+        print("Settings")
+        print("=" * 40)
+        print()
+
+        print("1. Basic Settings")
+        print("2. Advanced Settings")
+        print("3. Back")
+        print()
+
+        choice = input("Choice: ").strip()
+
+        if choice == "1":
+            settings_editor("basic")
+            continue
+
+        if choice == "2":
+            settings_editor("advanced")
+            continue
+
+        if choice == "3":
+            return
+
+
+
+def settings_editor(mode):
+    from settings import load_settings
+
+    settings = load_settings()
+
+    while True:
+
+        print()
+        print("=" * 40)
+
+        if mode == "basic":
+            print("Basic Settings")
+        else:
+            print("Advanced Settings")
+
+        print("=" * 40)
+        print()
+        option_map = {}
+        option = 1
+
+        for section, items in SETTINGS_MENU:
+
+            visible_items = []
+
+            for key, label in items:
+
+                if mode == "basic" and key not in BASIC_SETTINGS:
+                    continue
+
+                if mode == "advanced" and key not in ADVANCED_SETTINGS:
+                    continue
+
+                visible_items.append((key, label))
+
+            if not visible_items:
+                continue
+
+            print(f"[ {section} ]")
+
+            for key, label in visible_items:
+
+                option_map[option] = key
+
+                value = None
+
+                if section == "Synchronization":
+                    value = settings["sync"][key]
+                elif section == "Search":
+                    value = settings["search"][key]
+                elif section == "Backup":
+                    value = settings["backup"][key]
+                elif section == "User Interface":
+                    value = settings["ui"][key]
+                elif section == "Advanced":
+                    value = settings.get(key)
+
+                if isinstance(value, bool):
+                    value = "ON" if value else "OFF"
+
+                print(f"{option}. {label:<30} {value}")
+
+                option += 1
+
+            print()
+
+        back_option = option
+        print("-" * 40)
+        print(f"{back_option}. Back")
+        print()
+
+        pick = input("Choice: ").strip()
+        if not pick.isdigit():
+            print("Invalid choice.")
+            continue
+
+        idx = int(pick)
+        if idx == back_option:
+            break
+
+        key = option_map.get(idx)
+        if not key:
+            print("Invalid choice.")
+            continue
+
+        # Determine which nested section the key belongs to and preserve type.
+        if key in settings.get("sync", {}):
+            section_key = "sync"
+        elif key in settings.get("search", {}):
+            section_key = "search"
+        elif key in settings.get("backup", {}):
+            section_key = "backup"
+        elif key in settings.get("ui", {}):
+            section_key = "ui"
+        elif key in settings:
+            section_key = None
+        else:
+            print("Unknown setting key.")
+            continue
+
+        if section_key is None:
+            old_val = settings[key]
+        else:
+            old_val = settings[section_key][key]
+
+        # Boolean settings toggle automatically
+        if isinstance(old_val, bool):
+            if section_key is None:
+                settings[key] = not old_val
+            else:
+                settings[section_key][key] = not old_val
+
+            # Display friendly label
+            label = key
+            for _, items in SETTINGS_MENU:
+                for setting_key, setting_label in items:
+                    if setting_key == key:
+                        label = setting_label
+                        break
+                if label != key:
+                    break
+
+            save_json(SETTINGS_FILE, settings)
+
+            print(f"✓ {label} → {'ON' if settings[section_key][key] else 'OFF'}")
+            continue
+
+        # Numeric/Text settings still ask for input
+        new_val = input(f"New value for {key}: ").strip()
+
+        if isinstance(old_val, int):
+            value = int(new_val)
+
+        elif isinstance(old_val, float):
+            value = float(new_val)
+
+        else:
+            value = new_val
+
+        if section_key is None:
+            settings[key] = value
+        else:
+            settings[section_key][key] = value
+
+        save_json(SETTINGS_FILE, settings)
+        print("Saved.")
+
+
 async def data_center():
     ensure_exports()
 
     while True:
         print()
         print("=" * 45)
-        print("Data Center")
+        print("Tools")
         print("=" * 45)
         print()
         print("1. Export")
         print("2. Import")
         print("3. Backup")
         print("4. Restore")
-        print("5. Back")
+        print("5. Alias Manager")
+        print("6. Search Cache")
+        print("7. Settings")
+        print("8. Back")
         print()
 
         choice = input("Choice: ").strip()
@@ -158,6 +483,13 @@ async def data_center():
         elif choice == "4":
             restore_center()
         elif choice == "5":
+            from modes.alias_manager import alias_manager
+            alias_manager()
+        elif choice == "6":
+            export_search_cache()
+        elif choice == "7":
+            settings_home()
+        elif choice == "8":
             break
         else:
             print("Invalid choice.")
@@ -656,3 +988,4 @@ def _with_suffix(filename, suffix):
         return path.name
 
     return f"{filename}.{suffix}"
+
