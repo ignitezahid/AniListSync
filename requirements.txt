@@ -1,3 +1,4 @@
 rapidfuzz
 requests
 telethon
+rich>=14.0.0
