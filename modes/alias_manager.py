@@ -261,6 +261,35 @@ def merge_aliases():
         success("Merged.")
 
 
+def delete_alias():
+
+    alias = ask("Alias to delete:").lower()
+
+    if alias not in ALIASES:
+        warning("Alias not found.")
+        pause()
+        return
+
+    print()
+    print(alias)
+    print("↓")
+    print(ALIASES[alias]["title"])
+
+    confirm = ask("Delete this alias? (y/n):").lower()
+
+    if confirm not in ("y", "yes"):
+        warning("Cancelled.")
+        pause()
+        return
+
+    del ALIASES[alias]
+
+    save_json("aliases.json", ALIASES)
+
+    success("Alias deleted.")
+    pause()
+
+
 def alias_statistics():
 
     aliases = list(ALIASES.keys())

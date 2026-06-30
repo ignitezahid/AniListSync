@@ -9,6 +9,7 @@ def show_main_menu():
         "Main Menu",
         [
             "🔄  Sync",
+            "🔎  Search",
             "🔍  Compare",
             "🛠  Repair",
             "🧰  Tools",

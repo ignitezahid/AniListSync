@@ -10,12 +10,16 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 
 - 🔄 Telegram → AniList → MyAnimeList synchronization
 - ⚡ Live Telegram monitoring
+- 🔎 Manual Search
 - 🧠 Smart search with fuzzy matching & alias learning
 - 📚 Franchise Sync
 - 🔁 Retry Queue Manager
-- 🛠 Compare & repair libraries
+- 🗂 Alias Manager
+- 💾 Search Cache
+- 🛠 Compare & Repair libraries
 - 📊 Statistics dashboard
 - 💾 Backup, Restore, Import & Export
+- ⚙️ Built-in Settings Manager
 - 🎨 Modern Rich-powered terminal interface
 
 ---
@@ -73,7 +77,21 @@ python main.py
 
 ---
 
-# ⚙️ Built-in Tools
+# 📋 Main Menu
+
+```text
+1. 🔄 Sync
+2. 🔎 Search
+3. 🔍 Compare
+4. 🛠 Repair
+5. 🧰 Tools
+6. 📊 Statistics
+7. 🚪 Exit
+```
+
+---
+
+# 🧰 Built-in Tools
 
 - Export / Import
 - Backup / Restore
@@ -90,12 +108,20 @@ python main.py
 
 - [x] Rich terminal interface
 - [x] Retry Queue Manager
+- [x] Manual Search
+- [x] Live MyAnimeList synchronization
+- [x] Interactive Search
 - [ ] Better export formats
 
 ### v2.4
 
 - [ ] Duplicate alias detection
 - [ ] Improved statistics
+
+### v2.5
+
+- [ ] Dashboard
+- [ ] Library Search
 
 ### v3.0
 

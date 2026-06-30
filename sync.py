@@ -86,17 +86,21 @@ def choose_franchise(result: dict) -> list[dict]:
     choice = show_menu(
         "Related Anime",
         [
-            "Add only selected anime",
-            "Add entire franchise",
-            "Choose manually",
-            "Cancel",
+            "🔹 Add only selected anime",
+            "📚 Add entire franchise",
+            "🔍 Search another title",
+            "✋ Choose manually",
+            "❌ Cancel"
         ],
     )
 
     if choice == "2":
         return [selected] + related
+    
+    elif choice == "3":
+        return "search_again"
 
-    if choice == "3":
+    if choice == "4":
         print()
         print(f"1. {anime_title(selected)}")
 
@@ -132,10 +136,37 @@ def choose_franchise(result: dict) -> list[dict]:
 
         return unique
 
-    if choice == "4":
+    if choice == "5":
         return []
 
     return [selected]
+
+
+def interactive_search(title: str):
+    """Search AniList and let the user choose the result."""
+
+    while True:
+        result = search_anime(title)
+
+        if not result:
+            warning("No anime found.")
+            title = ask("Search (leave blank to cancel):")
+
+            if not title:
+                return None
+
+            continue
+
+        selected = choose_franchise(result)
+
+        if selected == "search_again":
+            title = ask("Search:")
+            continue
+
+        if not selected:
+            return None
+
+        return selected
 
 
 def add_selected_anime(
@@ -205,6 +236,9 @@ def add_selected_anime(
             return False
 
     return True
+
+
+
 
 
 async def import_old_messages(stats: dict, last_message_id: int) -> None:
@@ -295,6 +329,8 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
         selected_anime = choose_franchise(result)
 
+        selected_anime = interactive_search(title)
+
         if not selected_anime:
             stats["cancelled"] += 1
             warning("Cancelled.")
@@ -349,17 +385,10 @@ async def new_saved_message(event):
     print(f"\nNew anime detected: {title}")
     await asyncio.sleep(1)
 
-    result = search_anime(title)
-    if not result:
-        logger.warning(
-            "[NOT FOUND]"
-        )
-        return
-
-    selected_anime = choose_franchise(result)
+    selected_anime = interactive_search(title)
 
     if not selected_anime:
-        warning("Cancelled.")
+        logger.warning("[NOT FOUND]")
         return
 
     for anime in selected_anime:

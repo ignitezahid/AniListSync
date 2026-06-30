@@ -7,7 +7,7 @@ import traceback
 from telegram_client import client
 from sync import main as sync_main
 from menu import show_main_menu
-from utils.ui import success, warning
+from utils.ui import success, warning 
 
 while True:
 
@@ -31,33 +31,38 @@ while True:
                 traceback.print_exc(file=f)
 
             traceback.print_exc()
-
+    
     elif choice == "2":
+        from modes.manual_search import manual_search
+        manual_search()
+
+
+    elif choice == "3":
 
         from modes.compare import compare
 
         with client:
             client.loop.run_until_complete(compare())
 
-    elif choice == "3":
+    elif choice == "4":
 
         from modes.repair import repair
 
         repair()
 
-    elif choice == "4":
+    elif choice == "5":
 
         from modes.tools import data_center
 
         client.loop.run_until_complete(data_center())
 
-    elif choice == "5":
+    elif choice == "6":
 
         from modes.statistics import statistics
 
         statistics()
 
-    elif choice == "6":
+    elif choice == "7":
 
         success("Goodbye!")
         break
