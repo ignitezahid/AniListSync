@@ -6,11 +6,12 @@ import traceback
 
 from telegram_client import client
 from sync import main as sync_main
-from menu import show_menu
+from menu import show_main_menu
+from utils.ui import success, warning
 
 while True:
 
-    choice = show_menu()
+    choice = show_main_menu()
 
     if choice == "1":
 
@@ -58,9 +59,9 @@ while True:
 
     elif choice == "6":
 
-        print("Goodbye!")
+        success("Goodbye!")
         break
 
     else:
 
-        print("\nInvalid choice.\n")
+        warning("Invalid choice.")

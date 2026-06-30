@@ -1,25 +1,18 @@
-from version import CREATOR, VERSION
+from version import VERSION, CREATOR
+from utils.ui import show_app_header, show_menu
 
 
-def show_menu():
+def show_main_menu():
+    show_app_header(VERSION, CREATOR)
 
-    print()
-    print("=" * 45)
-    print(
-        f"Anime Library Manager v{VERSION}"
+    return show_menu(
+        "Main Menu",
+        [
+            "🔄  Sync",
+            "🔍  Compare",
+            "🛠  Repair",
+            "🧰  Tools",
+            "📊  Statistics",
+            "🚪  Exit",
+        ],
     )
-    print(
-        f"by {CREATOR}"
-    )
-    print("=" * 45)
-    print()
-
-    print("1. Sync")
-    print("2. Compare")
-    print("3. Repair")
-    print("4. Tools")
-    print("5. Statistics")
-    print("6. Exit")
-    print()
-
-    return input("Choice: ").strip()

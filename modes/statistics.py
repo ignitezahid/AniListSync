@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from utils.ui import pause, show_key_value_table
+
 from anilist import (
     get_completed_ids,
     ALIASES,
@@ -34,44 +36,17 @@ def statistics():
         list(Path(BACKUP_DIR).glob("*"))
     )
 
-    print()
-
-    print("=" * 50)
-    print("Anime Library Statistics")
-    print("=" * 50)
-
-    print()
-
-    print(
-        f"AniList Entries : {len(get_completed_ids())}"
+    show_key_value_table(
+        "Anime Library Statistics",
+        {
+            "AniList Entries": len(get_completed_ids()),
+            "MyAnimeList Entries": len(get_completed_mal_ids()),
+            "Aliases": len(ALIASES),
+            "Search Cache": len(SEARCH_CACHE),
+            "Retry Queue": len(retry_queue),
+            "Backups": backup_count,
+            "Resume ID": resume.get("last_message_id", 0),
+        },
     )
 
-    print(
-        f"MAL Entries     : {len(get_completed_mal_ids())}"
-    )
-
-    print(
-        f"Aliases         : {len(ALIASES)}"
-    )
-
-    print(
-        f"Search Cache    : {len(SEARCH_CACHE)}"
-    )
-
-    print(
-        f"Retry Queue     : {len(retry_queue)}"
-    )
-
-    print(
-        f"Backups         : {backup_count}"
-    )
-
-    print(
-        f"Resume ID       : {resume.get('last_message_id',0)}"
-    )
-
-    print()
-
-    print("=" * 50)
-
-    input("\nPress Enter to continue...")
+    pause()

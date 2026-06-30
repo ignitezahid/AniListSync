@@ -16,6 +16,9 @@ from utils.constants import (
 )
 from utils.file_utils import data_file, load_json, save_json
 
+from utils.ui import ask, error, success, warning, show_header, show_menu
+
+
 
 SETTING_LABELS = {
     "enable_anilist": "Enable AniList Sync",
@@ -223,75 +226,57 @@ def export_markdown(filename, rows, headers):
 
 def choose_format():
     while True:
-        print()
-        print("Export format")
-        print()
-        print("1. JSON")
-        print("2. CSV")
-        print("3. TXT")
-        print("4. Markdown")
-        print("5. Cancel")
-        print()
-
-        choice = input("Choice: ").strip()
+        choice = show_menu(
+            "Export Format",
+            [
+                "JSON",
+                "CSV",
+                "TXT",
+                "Markdown",
+                "Cancel",
+            ],
+        )
 
         if choice == "1":
             return "json"
         if choice == "2":
             return "csv"
-        if choice == "1":
-            settings_editor("basic")
-            continue
-
-        if choice == "2":
-            settings_editor("advanced")
-            continue
-
         if choice == "3":
-            return
-
-
+            return "txt"
         if choice == "4":
             return "md"
         if choice == "5":
             return None
 
-        print("Invalid choice.")
+        warning("Invalid choice.")
 
 
 def export_menu():
-    print()
-    print("=" * 30)
-    print("Export Center")
-    print("=" * 30)
-    print()
-    print("1 AniList")
-    print("2 MAL")
-    print("3 Telegram")
-    print("4 Missing")
-    print("5 Retry Queue")
-    print("6 Aliases")
-    print("7 Search Cache")
-    print("8 Back")
-    print()
-
-    return input("Choice: ").strip()
+    return show_menu(
+        "Export Center",
+        [
+            "AniList",
+            "MAL",
+            "Telegram",
+            "Missing",
+            "Retry Queue",
+            "Aliases",
+            "Search Cache",
+            "Back",
+        ],
+    )
 
 
 def settings_home():
     while True:
-        print()
-        print("=" * 40)
-        print("Settings")
-        print("=" * 40)
-        print()
-
-        print("1. Basic Settings")
-        print("2. Advanced Settings")
-        print("3. Back")
-        print()
-
-        choice = input("Choice: ").strip()
+        choice = show_menu(
+            "Settings",
+            [
+                "Basic Settings",
+                "Advanced Settings",
+                "Back",
+            ],
+        )
 
         if choice == "1":
             settings_editor("basic")
@@ -313,16 +298,8 @@ def settings_editor(mode):
 
     while True:
 
-        print()
-        print("=" * 40)
-
-        if mode == "basic":
-            print("Basic Settings")
-        else:
-            print("Advanced Settings")
-
-        print("=" * 40)
-        print()
+        title = "Basic Settings" if mode == "basic" else "Advanced Settings"
+        show_header(title)
         option_map = {}
         option = 1
 
@@ -376,9 +353,9 @@ def settings_editor(mode):
         print(f"{back_option}. Back")
         print()
 
-        pick = input("Choice: ").strip()
+        pick = ask()
         if not pick.isdigit():
-            print("Invalid choice.")
+            warning("Invalid choice.")
             continue
 
         idx = int(pick)
@@ -387,7 +364,7 @@ def settings_editor(mode):
 
         key = option_map.get(idx)
         if not key:
-            print("Invalid choice.")
+            warning("Invalid choice.")
             continue
 
         # Determine which nested section the key belongs to and preserve type.
@@ -402,7 +379,7 @@ def settings_editor(mode):
         elif key in settings:
             section_key = None
         else:
-            print("Unknown setting key.")
+            error("Unknown setting key.")
             continue
 
         if section_key is None:
@@ -429,11 +406,11 @@ def settings_editor(mode):
 
             save_json(SETTINGS_FILE, settings)
 
-            print(f"✓ {label} → {'ON' if settings[section_key][key] else 'OFF'}")
+            success(f"{label} -> {'ON' if settings[section_key][key] else 'OFF'}")
             continue
 
         # Numeric/Text settings still ask for input
-        new_val = input(f"New value for {key}: ").strip()
+        new_val = ask(f"New value for {key}:")
 
         if isinstance(old_val, int):
             value = int(new_val)
@@ -450,29 +427,27 @@ def settings_editor(mode):
             settings[section_key][key] = value
 
         save_json(SETTINGS_FILE, settings)
-        print("Saved.")
+        success("Saved.")
 
 
 async def data_center():
     ensure_exports()
 
     while True:
-        print()
-        print("=" * 45)
-        print("Tools")
-        print("=" * 45)
-        print()
-        print("1. Export")
-        print("2. Import")
-        print("3. Backup")
-        print("4. Restore")
-        print("5. Alias Manager")
-        print("6. Search Cache")
-        print("7. Settings")
-        print("8. Back")
-        print()
-
-        choice = input("Choice: ").strip()
+        choice = show_menu(
+            "Tools",
+            [
+                "Export",
+                "Import",
+                "Backup",
+                "Restore",
+                "Alias Manager",
+                "Search Cache",
+                "Retry Queue",
+                "Settings",
+                "Back",
+            ],
+        )
 
         if choice == "1":
             await export_center()
@@ -488,11 +463,16 @@ async def data_center():
         elif choice == "6":
             export_search_cache()
         elif choice == "7":
-            settings_home()
+            from modes.retry_queue import retry_queue_menu
+            retry_queue_menu()
+
         elif choice == "8":
+            settings_home()
+
+        elif choice == "9":
             break
         else:
-            print("Invalid choice.")
+            warning("Invalid choice.")
 
 
 async def export_center():
@@ -516,7 +496,7 @@ async def export_center():
         elif choice == "8":
             break
         else:
-            print("Invalid choice.")
+            warning("Invalid choice.")
 
 
 def export_anilist_library():
@@ -587,7 +567,7 @@ def export_missing_anime():
                 report = json.load(f)
 
     if not report:
-        print("No missing anime report found. Run Compare first.")
+        warning("No missing anime report found. Run Compare first.")
         return
 
     missing = report.get("missing", [])
@@ -642,21 +622,18 @@ def import_center():
     ensure_exports()
 
     while True:
-        print()
-        print("=" * 30)
-        print("Import Center")
-        print("=" * 30)
-        print()
-        print("1. aliases.json")
-        print("2. retry_queue.json")
-        print("3. search_cache.json")
-        print("4. settings.json")
-        print("5. telegram.txt")
-        print("6. Custom file")
-        print("7. Back")
-        print()
-
-        choice = input("Choice: ").strip()
+        choice = show_menu(
+            "Import Center",
+            [
+                "aliases.json",
+                "retry_queue.json",
+                "search_cache.json",
+                "settings.json",
+                "telegram.txt",
+                "Custom file",
+                "Back",
+            ],
+        )
 
         if choice == "1":
             import_json_file(ALIASES_FILE, merge=True)
@@ -673,7 +650,7 @@ def import_center():
         elif choice == "7":
             break
         else:
-            print("Invalid choice.")
+            warning("Invalid choice.")
 
 
 def backup_center():
@@ -684,58 +661,49 @@ def backup_center():
             backup_file(filename)
             created += 1
 
-    print(f"Backed up {created} data file(s).")
+    success(f"Backed up {created} data file(s).")
 
 
 def restore_center():
     backups = sorted(Path(BACKUP_DIR).glob("*.json"), reverse=True)
 
     if not backups:
-        print("No backups found.")
+        warning("No backups found.")
         return
 
-    print()
-    print("=" * 30)
-    print("Restore Backup")
-    print("=" * 30)
-    print()
-
-    for index, path in enumerate(backups, 1):
-        print(f"{index}. {path.name}")
-
-    print(f"{len(backups) + 1}. Back")
-    print()
-
-    choice = input("Choice: ").strip()
+    choice = show_menu(
+        "Restore Backup",
+        [path.name for path in backups] + ["Back"],
+    )
 
     if not choice.isdigit():
-        print("Invalid choice.")
+        warning("Invalid choice.")
         return
 
     index = int(choice)
     if index == len(backups) + 1:
         return
     if index < 1 or index > len(backups):
-        print("Invalid choice.")
+        warning("Invalid choice.")
         return
 
     backup = backups[index - 1]
     original = _original_backup_name(backup.name)
 
     if not original:
-        print("Could not detect original filename.")
+        error("Could not detect original filename.")
         return
 
-    confirm = input(f"Restore {backup.name} to data/{original}? (y/n): ").strip().lower()
+    confirm = ask(f"Restore {backup.name} to data/{original}? (y/n):").lower()
     if confirm != "y":
-        print("Restore cancelled.")
+        warning("Restore cancelled.")
         return
 
     if data_file(original).exists():
         backup_file(original)
 
     copy2(backup, data_file(original))
-    print(f"Restored data/{original}.")
+    success(f"Restored data/{original}.")
 
 
 def import_json_file(filename, merge=False, path=None):
@@ -749,21 +717,21 @@ def import_json_file(filename, merge=False, path=None):
         with open(path, "r", encoding="utf-8") as f:
             incoming = json.load(f)
     except Exception as exc:
-        print(f"Could not read JSON: {exc}")
+        error(f"Could not read JSON: {exc}")
         return
 
     current = load_json(filename, [] if isinstance(incoming, list) else {})
 
     if merge:
-        mode = input("Merge with current data? (Y=merge, N=replace, C=cancel): ").strip().lower()
+        mode = ask("Merge with current data? (Y=merge, N=replace, C=cancel):").lower()
         if mode == "c":
-            print("Import cancelled.")
+            warning("Import cancelled.")
             return
         replace = mode == "n"
     else:
-        confirm = input(f"Replace data/{filename}? (y/n): ").strip().lower()
+        confirm = ask(f"Replace data/{filename}? (y/n):").lower()
         if confirm != "y":
-            print("Import cancelled.")
+            warning("Import cancelled.")
             return
         replace = True
 
@@ -771,12 +739,12 @@ def import_json_file(filename, merge=False, path=None):
 
     if replace:
         save_json(filename, incoming)
-        print(f"Imported {filename}.")
+        success(f"Imported {filename}.")
         return
 
     merged = _merge_data(current, incoming)
     save_json(filename, merged)
-    print(f"Merged import into {filename}.")
+    success(f"Merged import into {filename}.")
 
 
 def import_telegram_txt(filename, path=None):
@@ -790,7 +758,7 @@ def import_telegram_txt(filename, path=None):
         titles = [line.strip() for line in f if line.strip()]
 
     if not titles:
-        print("No titles found.")
+        warning("No titles found.")
         return
 
     queue = load_json(RETRY_FILE, [])
@@ -804,11 +772,11 @@ def import_telegram_txt(filename, path=None):
 
     backup_file(RETRY_FILE)
     save_json(RETRY_FILE, queue)
-    print(f"Imported {added} title(s) into retry_queue.json.")
+    success(f"Imported {added} title(s) into retry_queue.json.")
 
 
 def import_custom_file():
-    raw = input("File path: ").strip().strip('"')
+    raw = ask("File path:").strip('"')
     if not raw:
         return
 
@@ -817,7 +785,7 @@ def import_custom_file():
         path = EXPORT_PATH / raw
 
     if not path.exists():
-        print("File not found.")
+        error("File not found.")
         return
 
     name = path.name.lower()
@@ -833,14 +801,14 @@ def import_custom_file():
     elif name.endswith(".txt"):
         import_telegram_txt(path.name, path=path)
     else:
-        print("Supported custom imports: aliases, retry queue, cache, settings, or TXT titles.")
+        warning("Supported custom imports: aliases, retry queue, cache, settings, or TXT titles.")
 
 
 def _export_dataset(name, json_data, rows, headers, txt_lines=None):
     fmt = choose_format()
 
     if not fmt:
-        print("Export cancelled.")
+        warning("Export cancelled.")
         return
 
     if fmt == "json":
@@ -852,7 +820,7 @@ def _export_dataset(name, json_data, rows, headers, txt_lines=None):
     else:
         path = export_markdown(name, rows, headers)
 
-    print(f"Exported to {path}")
+    success(f"Exported to {path}")
 
 
 def _alias_rows(aliases):
@@ -960,14 +928,14 @@ def _merge_data(current, incoming):
 
 
 def _ask_import_path(default_name):
-    raw = input(f"Import file [{default_name}]: ").strip().strip('"')
+    raw = ask(f"Import file [{default_name}]:").strip('"')
     path = Path(raw or default_name)
 
     if not path.exists():
         path = EXPORT_PATH / path
 
     if not path.exists():
-        print("File not found.")
+        error("File not found.")
         return None
 
     return path
@@ -988,4 +956,7 @@ def _with_suffix(filename, suffix):
         return path.name
 
     return f"{filename}.{suffix}"
+
+
+
 

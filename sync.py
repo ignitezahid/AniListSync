@@ -7,6 +7,14 @@ from utils import logger
 from utils.backup import backup_file
 from utils.constants import ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE
 from utils.file_utils import load_json, save_json
+from utils.ui import (
+    ask,
+    success,
+    warning,
+    watcher_ready,
+    show_key_value_table,
+    show_menu,
+)
 from anilist import (
     search_anime,
     add_to_list,
@@ -75,16 +83,15 @@ def choose_franchise(result: dict) -> list[dict]:
     for i, anime in enumerate(related, 1):
         print(f"{i}. {anime_title(anime)}")
 
-    print()
-    print("-" * 40)
-    print()
-    print("1. Add only selected anime")
-    print("2. Add entire franchise")
-    print("3. Choose manually")
-    print("4. Cancel")
-    print()
-
-    choice = input("Choice: ").strip()
+    choice = show_menu(
+        "Related Anime",
+        [
+            "Add only selected anime",
+            "Add entire franchise",
+            "Choose manually",
+            "Cancel",
+        ],
+    )
 
     if choice == "2":
         return [selected] + related
@@ -96,9 +103,7 @@ def choose_franchise(result: dict) -> list[dict]:
         for i, anime in enumerate(related, 2):
             print(f"{i}. {anime_title(anime)}")
 
-        picks = input(
-            "\nChoose numbers (comma separated): "
-        ).strip()
+        picks = ask("Choose numbers (comma separated):")
 
         chosen = []
 
@@ -135,9 +140,9 @@ def choose_franchise(result: dict) -> list[dict]:
 
 def add_selected_anime(
     anime: dict,
-    stats: dict,
-    retry_queue: list[str],
-    retry_title: str,
+    stats: dict | None = None,
+    retry_queue: list[str] | None = None,
+    retry_title: str | None = None,
 ) -> bool:
     media_id = anime["id"]
     title = anime_title(anime)
@@ -146,18 +151,27 @@ def add_selected_anime(
     print(f"Adding: {title}")
 
     if media_id in completed_ids:
-        stats["exists"] += 1
+        if stats is not None:
+            stats["exists"] += 1
         print("[AniList] Already Exists")
     else:
         if add_to_list(media_id):
-            stats["added"] += 1
+            if stats is not None:
+                stats["added"] += 1
             completed_ids.add(media_id)
             logger.success(
                 "[AniList] Added"
             )
         else:
-            stats["failed"] += 1
-            if retry_title not in retry_queue:
+            if stats is not None:
+                stats["failed"] += 1
+            if (
+                retry_queue is not None
+                and retry_title is not None
+                and retry_title not in retry_queue
+            ):
+                retry_queue.append(retry_title)
+                save_retry_queue(retry_queue)
                 retry_queue.append(retry_title)
                 save_retry_queue(retry_queue)
             print(f"[AniList] Failed: {title}\n")
@@ -177,10 +191,16 @@ def add_selected_anime(
             mal_completed_ids.add(anime.get("idMal"))
             print("[MAL] Updated\n")
         else:
-            stats["failed"] += 1
-            if retry_title not in retry_queue:
+            if stats is not None:
+                stats["failed"] += 1
+            if (
+                retry_queue is not None
+                and retry_title is not None
+                and retry_title not in retry_queue
+            ):
                 retry_queue.append(retry_title)
                 save_retry_queue(retry_queue)
+
             print(f"[MAL] Failed: {title}\n")
             return False
 
@@ -218,15 +238,13 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
         result = search_anime(title)
         if not result:
             while True:
-                print()
-                print("=" * 60)
-                print("Anime not found.")
-                print(f"Telegram title: {title}")
-                print()
-                print("1. Search Again")
-                print("2. Skip")
-                print()
-                option = input("Choice: ").strip()
+                option = show_menu(
+                    f"Anime not found: {title}",
+                    [
+                        "Search Again",
+                        "Skip",
+                    ],
+                )
 
                 if option == "2":
                     stats["not_found"] += 1
@@ -239,16 +257,16 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
                     return
 
                 if option != "1":
-                    print("Invalid choice.")
+                    warning("Invalid choice.")
                     continue
 
-                query = input("\nSearch (Enter = reuse title): ").strip()
+                query = ask("Search (Enter = reuse title):")
                 if not query:
                     query = title
 
                 candidates = search_candidates(query)
                 if not candidates:
-                    print("No results.")
+                    warning("No results.")
                     continue
 
                 print()
@@ -260,13 +278,13 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
                     )
 
                 try:
-                    pick = int(input("\nChoice: "))
+                    pick = int(ask())
                 except ValueError:
-                    print("Invalid choice.")
+                    warning("Invalid choice.")
                     continue
 
                 if pick < 1 or pick > len(candidates):
-                    print("Invalid choice.")
+                    warning("Invalid choice.")
                     continue
 
                 result = candidates[pick - 1][1]
@@ -279,7 +297,7 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
         if not selected_anime:
             stats["cancelled"] += 1
-            print("Cancelled.")
+            warning("Cancelled.")
             return
 
         for anime in selected_anime:
@@ -341,23 +359,13 @@ async def new_saved_message(event):
     selected_anime = choose_franchise(result)
 
     if not selected_anime:
-        print("Cancelled.")
+        warning("Cancelled.")
         return
 
     for anime in selected_anime:
-        media_id = anime["id"]
-
-        if media_id in completed_ids:
-            print(f"[ALREADY EXISTS] {anime_title(anime)}")
-            continue
-
-        if add_to_list(media_id):
-            completed_ids.add(media_id)
-            print(f"[ADDED] {anime_title(anime)}")
-        else:
-            logger.error(
-                f"[FAILED] {anime_title(anime)}"
-            )
+        add_selected_anime(anime)
+    print()
+    watcher_ready()
 
 
 async def main() -> None:
@@ -395,25 +403,26 @@ async def main() -> None:
 
     await import_old_messages(stats, last_message_id)
 
-    print("\n" + "=" * 40)
-    print("Import Finished")
-    print("=" * 40)
-    print(f"Checked          : {stats['checked']}")
-    print(f"Completed        : {stats['completed']}")
-    print(f"Not Found        : {stats['not_found']}")
-    print(f"Failed Titles    : {stats['failed_titles']}")
-    print(f"Cancelled        : {stats['cancelled']}")
-    print("-" * 40)
-    print(
-        "Title Total      : "
-        f"{stats['completed'] + stats['not_found'] + stats['failed_titles'] + stats['cancelled']}"
+    show_key_value_table(
+        "Import Finished",
+        {
+            "Checked": stats["checked"],
+            "Completed": stats["completed"],
+            "Not Found": stats["not_found"],
+            "Failed Titles": stats["failed_titles"],
+            "Cancelled": stats["cancelled"],
+            "Title Total": (
+                stats["completed"]
+                + stats["not_found"]
+                + stats["failed_titles"]
+                + stats["cancelled"]
+            ),
+            "Anime Added": stats["added"],
+            "Anime Existing": stats["exists"],
+            "Anime Failed": stats["failed"],
+            "Aliases Learned": stats["aliases"],
+        },
     )
-    print("=" * 40)
-    print(f"Anime Added      : {stats['added']}")
-    print(f"Anime Existing   : {stats['exists']}")
-    print(f"Anime Failed     : {stats['failed']}")
-    print(f"Aliases Learned : {stats['aliases']}")
-    print("=" * 40)
 
-    print("Watching Saved Messages...\n")
+    watcher_ready()
     await client.run_until_disconnected()

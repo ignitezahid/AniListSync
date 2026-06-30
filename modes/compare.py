@@ -2,6 +2,7 @@ import asyncio
 
 from telegram_client import client
 from utils.file_utils import save_json
+from utils.ui import success, show_key_value_table
 from anilist import (
     search_anime,
     get_completed_ids
@@ -70,13 +71,13 @@ async def compare():
 
     save_json("missing_anilist.json", report)
 
-    print()
-    print("=" * 40)
-    print("Comparison Finished")
-    print("=" * 40)
-    print(f'Telegram : {report["summary"]["telegram_total"]}')
-    print(f'AniList  : {report["summary"]["already_in_anilist"]}')
-    print(f'Missing  : {report["summary"]["missing_from_anilist"]}')
-    print(f'Not Found: {report["summary"]["not_found"]}')
-    print()
-    print("Saved as missing_anilist.json")
+    show_key_value_table(
+        "Comparison Finished",
+        {
+            "Telegram": report["summary"]["telegram_total"],
+            "AniList": report["summary"]["already_in_anilist"],
+            "Missing": report["summary"]["missing_from_anilist"],
+            "Not Found": report["summary"]["not_found"],
+        },
+    )
+    success("Saved as missing_anilist.json")

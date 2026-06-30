@@ -1,30 +1,24 @@
 from anilist import ALIASES, save_alias, search_candidates
 from utils.file_utils import save_json
+from utils.ui import ask, pause, success, warning, show_header, show_key_value_table, show_menu
 
 
 def alias_manager():
 
     while True:
 
-        print()
-
-        print("=" * 50)
-        print("Alias Manager")
-        print("=" * 50)
-
-        print()
-
-        print("1. View aliases")
-        print("2. Search alias")
-        print("3. Edit alias")
-        print("4. Merge aliases")
-        print("5. Delete alias")
-        print("6. Statistics")
-        print("7. Back")
-
-        print()
-
-        choice = input("Choice: ").strip()
+        choice = show_menu(
+            "Alias Manager",
+            [
+                "View aliases",
+                "Search alias",
+                "Edit alias",
+                "Merge aliases",
+                "Delete alias",
+                "Statistics",
+                "Back",
+            ],
+        )
 
         if choice == "1":
 
@@ -56,7 +50,7 @@ def alias_manager():
 
         else:
 
-            print("Invalid choice.")
+            warning("Invalid choice.")
 
 
 def view_aliases():
@@ -74,16 +68,10 @@ def view_aliases():
 
         current = aliases[start:end]
 
-        print()
-
-        print("=" * 60)
-
-        print(
+        show_header(
             f"Aliases {start+1}-{min(end, len(aliases))} "
             f"of {len(aliases)}"
         )
-
-        print("=" * 60)
 
         for alias, data in current:
 
@@ -97,7 +85,7 @@ def view_aliases():
         print("[P] Previous")
         print("[Q] Back")
 
-        choice = input("> ").lower().strip()
+        choice = ask(">").lower()
 
         if choice == "n":
 
@@ -118,11 +106,7 @@ def view_aliases():
 
 def search_alias():
 
-    query = input(
-
-        "\nSearch: "
-
-    ).lower().strip()
+    query = ask("Search:").lower()
 
     print()
 
@@ -146,22 +130,20 @@ def search_alias():
 
     if not found:
 
-        print("No aliases found.")
+        warning("No aliases found.")
 
-    input("\nPress Enter...")
+    pause()
 
 
 def edit_alias():
 
-    alias = input(
-        "\nAlias: "
-    ).lower().strip()
+    alias = ask("Alias:").lower()
 
     if alias not in ALIASES:
 
-        print("Alias not found.")
+        warning("Alias not found.")
 
-        input("\nPress Enter...")
+        pause()
 
         return
 
@@ -177,11 +159,7 @@ def edit_alias():
 
     print(ALIASES[alias]["title"])
 
-    query = input(
-
-        "\nNew search (Enter = reuse title): "
-
-    ).strip()
+    query = ask("New search (Enter = reuse title):")
 
     if not query:
 
@@ -191,9 +169,9 @@ def edit_alias():
 
     if not candidates:
 
-        print("No candidates found.")
+        warning("No candidates found.")
 
-        input("\nPress Enter...")
+        pause()
 
         return
 
@@ -212,7 +190,7 @@ def edit_alias():
         print(f"{i}. {title} ({score:.1f}%)")
 
     pick = int(
-        input("\nChoice: ")
+        ask()
     )
 
     result = candidates[pick-1][1]
@@ -222,34 +200,30 @@ def edit_alias():
         result
     )
 
-    print("Alias updated.")
+    success("Alias updated.")
 
 
 def merge_aliases():
 
-    keep = input(
-        "\nAlias to keep: "
-    ).lower().strip()
+    keep = ask("Alias to keep:").lower()
 
     if keep not in ALIASES:
-        print("Alias not found.")
-        input("\nPress Enter...")
+        warning("Alias not found.")
+        pause()
         return
 
-    remove = input(
-        "Alias to remove: "
-    ).lower().strip()
+    remove = ask("Alias to remove:").lower()
 
     if remove not in ALIASES:
-        print("Alias not found.")
-        input("\nPress Enter...")
+        warning("Alias not found.")
+        pause()
         return
 
     if keep == remove:
 
-        print("Both aliases are the same.")
+        warning("Both aliases are the same.")
 
-        input("\nPress Enter...")
+        pause()
 
         return
 
@@ -273,11 +247,7 @@ def merge_aliases():
         ALIASES[remove]["title"]
     )
 
-    confirm = input(
-
-        "\nMerge? (y/n): "
-
-    ).lower()
+    confirm = ask("Merge? (y/n):").lower()
 
     if confirm == "y":
 
@@ -288,14 +258,13 @@ def merge_aliases():
             ALIASES
         )
 
-        print("Merged.")
+        success("Merged.")
 
 
 def alias_statistics():
 
     aliases = list(ALIASES.keys())
-
-    print(f"Total aliases : {len(aliases)}")
+    values = {"Total aliases": len(aliases)}
 
     if aliases:
 
@@ -307,8 +276,13 @@ def alias_statistics():
             for a in aliases
         ) / len(aliases)
 
-        print(f"Longest : {longest}")
-        print(f"Shortest: {shortest}")
-        print(f"Average : {avg:.1f}")
+        values.update(
+            {
+                "Longest": longest,
+                "Shortest": shortest,
+                "Average": f"{avg:.1f}",
+            }
+        )
 
-    input("\nPress Enter...")
+    show_key_value_table("Alias Statistics", values)
+    pause()

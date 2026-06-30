@@ -6,6 +6,7 @@ from config import ANILIST_TOKEN, DEFAULT_STATUS
 from settings import SETTINGS
 from utils.constants import ALIASES_FILE, CACHE_FILE
 from utils.file_utils import load_json, save_json
+from utils.ui import ask, warning
 from urllib.parse import quote
 
 URL = "https://graphql.anilist.co"
@@ -501,19 +502,19 @@ def search_anime(title):
                     or anime["title"]["native"]
                 )
                 print(f"{i}. {display_title} ({score:.1f}%)")
-            choice = input("\nChoose (1-5, 0=Skip): ").strip()
+            choice = ask("Choose (1-5, 0=Skip):")
             if choice == "0":
                 SEARCH_CACHE[title] = None
                 save_cache()
                 return None
             if not choice.isdigit():
-                print("Invalid choice.")
+                warning("Invalid choice.")
                 SEARCH_CACHE[title] = None
                 save_cache()
                 return None
             choice = int(choice)
             if choice < 1 or choice > len(top):
-                print("Invalid choice.")
+                warning("Invalid choice.")
                 SEARCH_CACHE[title] = None
                 save_cache()
                 return None
@@ -524,9 +525,9 @@ def search_anime(title):
                 or anime["title"]["native"]
             )
             print(f"\nYou selected:\n{display_title}")
-            confirm = input("Confirm? (Y/N): ").strip().lower()
+            confirm = ask("Confirm? (Y/N):").lower()
             if confirm != "y":
-                print("Selection cancelled.")
+                warning("Selection cancelled.")
                 SEARCH_CACHE[title] = None
                 save_cache()
                 return None
