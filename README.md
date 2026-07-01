@@ -111,7 +111,7 @@ python main.py
 - [x] Manual Search
 - [x] Live MyAnimeList synchronization
 - [x] Interactive Search
-- [ ] Better export formats
+- [x] Better export formats
 
 ### v2.4
 
