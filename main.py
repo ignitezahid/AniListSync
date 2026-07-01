@@ -6,8 +6,10 @@ import traceback
 
 from telegram_client import client
 from sync import main as sync_main
-from menu import show_main_menu
+from menu import show_dashboard, show_main_menu
 from utils.ui import success, warning 
+
+show_dashboard()
 
 while True:
 

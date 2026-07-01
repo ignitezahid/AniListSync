@@ -117,6 +117,14 @@ def get_access_token():
     return tokens["access_token"]
 
 
+def test_connection():
+    try:
+        get_access_token()
+        return True
+    except Exception:
+        return False
+
+
 def get_completed_mal_anime():
     access_token = get_access_token()
     headers = {

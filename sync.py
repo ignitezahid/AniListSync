@@ -1,6 +1,11 @@
 import asyncio
+import json
 import os
+from datetime import datetime, timezone
 from telethon import events
+
+from rich.progress import BarColumn, Progress, TextColumn
+from rich.table import Column
 
 from telegram_client import client
 from utils import logger
@@ -9,6 +14,7 @@ from utils.constants import ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE
 from utils.file_utils import load_json, save_json
 from utils.ui import (
     ask,
+    console,
     success,
     warning,
     watcher_ready,
@@ -157,6 +163,15 @@ def interactive_search(title: str):
 
             continue
 
+        if result.get("status") == "NOT_YET_RELEASED":
+            warning("This anime has not been released yet.")
+            title = ask("Search (leave blank to cancel):")
+
+            if not title:
+                return None
+
+            continue
+
         selected = choose_franchise(result)
 
         if selected == "search_again":
@@ -263,9 +278,6 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
         processed_titles.add(title)
         stats["checked"] += 1
-        logger.info(
-            f"Checking: {title}"
-        )
 
         await asyncio.sleep(1)
 
@@ -353,24 +365,43 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
             retry_queue.remove(title)
             save_retry_queue(retry_queue)
 
-    # First retry known failures
-    for title in list(retry_queue):
-        await process_title(title)
+    # Collect all titles upfront for progress tracking
+    all_titles = list(retry_queue)
+    title_to_msg_id = {}
 
-    # Then process chronological history with resume.
     async for message in client.iter_messages("me", reverse=True):
         if not getattr(message, "text", None):
             continue
-
-        # Telegram IDs increase over time.
         if message.id <= last_message_id:
             continue
-
         title = message.text.strip()
-        await process_title(title)
+        if title and title not in all_titles:
+            all_titles.append(title)
+            title_to_msg_id[title] = message.id
 
-        # Update resume progress after we've attempted this message.
-        save_resume(message.id)
+    if not all_titles:
+        print("No new titles to process.")
+        return
+
+    with Progress(
+        TextColumn("[progress.description]{task.description:<50}", table_column=Column(width=52)),
+        BarColumn(),
+        TextColumn(" {task.completed:>4.0f}/{task.total}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Checking:", total=len(all_titles))
+
+        for title in all_titles:
+            progress.update(task, description=f"Checking:\n{title}")
+
+            if title not in processed_titles:
+                await process_title(title)
+
+            msg_id = title_to_msg_id.get(title)
+            if msg_id:
+                save_resume(msg_id)
+
+            progress.advance(task)
 
 
 @client.on(events.NewMessage(chats="me"))
@@ -412,9 +443,6 @@ async def main() -> None:
         "aliases": 0,
     }
 
-    me = await client.get_me()
-    print(f"Connected to Telegram as {me.first_name}\n")
-
     backup_file(ALIASES_FILE)
     backup_file(CACHE_FILE)
     backup_file(RESUME_FILE)
@@ -452,6 +480,12 @@ async def main() -> None:
             "Aliases Learned": stats["aliases"],
         },
     )
+
+    try:
+        with open("state.json", "w", encoding="utf-8") as f:
+            json.dump({"last_sync": datetime.now(timezone.utc).isoformat()}, f)
+    except Exception:
+        pass
 
     watcher_ready()
     await client.run_until_disconnected()

@@ -194,12 +194,11 @@ def test_connection():
     data = graphql_request(query)
 
     if "errors" in data:
-        raise Exception(data["errors"])
+        return False
 
     viewer = data["data"]["Viewer"]
-
-    print(f"Connected to AniList!")
-    print(f"User: {viewer['name']}")
+    print(f"Connected as {viewer['name']}")
+    return True
 
 
 def search_candidates(title):
@@ -257,6 +256,8 @@ def search_candidates(title):
         SEARCH_CACHE[title] = [(100.0, result)]
         save_cache()
         return [(100.0, result)]
+
+    print("\nSearching AniList...")
 
     # Clean markdown only
     title = re.sub(r"\*\*|__", "", title).strip()
@@ -317,6 +318,8 @@ def search_candidates(title):
             continue
 
         for anime in new_media:
+            if anime.get("status") == "NOT_YET_RELEASED":
+                continue
             all_candidates[anime["id"]] = anime
 
         best, best_score = find_best_match(new_media, title)
@@ -401,6 +404,8 @@ def search_anime(title):
         SEARCH_CACHE[title] = result
         return result
 
+    print("\nSearching AniList...")
+
     title = re.sub(r"\*\*|__", "", title).strip()
 
     search_title = title
@@ -412,6 +417,7 @@ def search_anime(title):
           id
           idMal
           episodes
+          status
           title {
             romaji
             english
@@ -468,9 +474,15 @@ def search_anime(title):
             all_candidates[anime["id"]] = anime
 
         best, best_score = find_best_match(new_media, title)
+
         if DEBUG:
             print(f"Best Match Score: {best_score}%")
-        if best_score >= SETTINGS["search_threshold"]:
+
+        if (
+            best
+            and best.get("status") != "NOT_YET_RELEASED"
+            and best_score >= SETTINGS["search_threshold"]
+        ):
             SEARCH_CACHE[title] = best
             save_cache()
             return best
@@ -480,15 +492,11 @@ def search_anime(title):
         if DEBUG:
             print("No candidates. Trying keyword search...")
         keywords = extract_keywords(title)
-        for keyword in keywords[:3]:
-            variables = {
-                "search": keyword
-            }
-            data = graphql_request(query, variables)
-            if "errors" in data:
+        for anime in data["data"]["Page"]["media"]:
+            if anime.get("status") == "NOT_YET_RELEASED":
                 continue
-            for anime in data["data"]["Page"]["media"]:
-                all_candidates[anime["id"]] = anime
+
+            all_candidates[anime["id"]] = anime
 
     if all_candidates:
         print("DEBUG: candidates =", len(all_candidates))
@@ -575,6 +583,8 @@ def add_to_list(media_id):
     return True
 
 
+
+
 def get_media_with_relations(media_id):
     query = """
     query ($id: Int) {
@@ -582,6 +592,7 @@ def get_media_with_relations(media_id):
         id
         idMal
         episodes
+        status
         title {
           romaji
           english
@@ -594,11 +605,30 @@ def get_media_with_relations(media_id):
               id
               idMal
               episodes
+              status
               type
               title {
                 romaji
                 english
                 native
+              }
+
+              relations {
+                edges {
+                  relationType
+                  node {
+                    id
+                    idMal
+                    episodes
+                    status
+                    type
+                    title {
+                      romaji
+                      english
+                      native
+                    }
+                  }
+                }
               }
             }
           }
@@ -619,27 +649,37 @@ def get_media_with_relations(media_id):
         return None, []
 
     media = data["data"]["Media"]
+
     related = []
-    seen_ids = {
-        media["id"]
-    }
+    seen_ids = {media["id"]}
 
-    for edge in media.get("relations", {}).get("edges", []):
-        node = edge.get("node")
-
+    def add_node(node):
         if not node:
-            continue
+            return
 
         if node.get("type") != "ANIME":
-            continue
+            return
+        
+        if node.get("status") == "NOT_YET_RELEASED":
+            return
 
         if node["id"] in seen_ids:
-            continue
+            return
 
         seen_ids.add(node["id"])
         related.append(node)
 
+    # Level 1 + Level 2 relations
+    for edge in media.get("relations", {}).get("edges", []):
+        node = edge.get("node")
+
+        add_node(node)
+
+        for edge2 in node.get("relations", {}).get("edges", []):
+            add_node(edge2.get("node"))
+
     return media, related
+
 
 
 def get_completed_anime():

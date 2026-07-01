@@ -1,51 +1,66 @@
+from datetime import datetime, timezone
 from pathlib import Path
 
 from utils.ui import pause, show_key_value_table
 
 from anilist import (
-    get_completed_ids,
     ALIASES,
     SEARCH_CACHE
 )
 
-from mal import get_completed_mal_ids
-
-from utils.constants import BACKUP_DIR, RESUME_FILE, RETRY_FILE, SETTINGS_FILE
+from utils.constants import BACKUP_DIR, EXPORT_DIR, RETRY_FILE
 from utils.file_utils import load_json
+from version import VERSION
+
+
+def _relative_time(iso_str: str) -> str:
+    if not iso_str:
+        return "Never"
+    try:
+        then = datetime.fromisoformat(iso_str)
+        now = datetime.now(timezone.utc) if then.tzinfo else datetime.now()
+        diff = now - then
+        seconds = int(diff.total_seconds())
+        if seconds < 60:
+            return "Just now"
+        if seconds < 3600:
+            return f"{seconds // 60} minutes ago"
+        if seconds < 86400:
+            return f"{seconds // 3600} hours ago"
+        return f"{seconds // 86400} days ago"
+    except Exception:
+        return "Unknown"
 
 
 def statistics():
 
-    retry_queue = load_json(
-        RETRY_FILE,
-        []
-    )
+    retry_queue = load_json(RETRY_FILE, [])
 
-    resume = load_json(
-        RESUME_FILE,
-        {}
+    backup_count = len(list(Path(BACKUP_DIR).glob("*")))
 
-    )
+    export_count = len(list(Path(EXPORT_DIR).glob("*")))
 
-    settings = load_json(
-        SETTINGS_FILE,
-        {}
-    )
-
-    backup_count = len(
-        list(Path(BACKUP_DIR).glob("*"))
-    )
+    last_sync = "Never"
+    state_path = Path("state.json")
+    if state_path.exists():
+        try:
+            import json
+            with open(state_path, encoding="utf-8") as f:
+                state = json.load(f)
+            last_sync = _relative_time(state.get("last_sync", ""))
+        except Exception:
+            pass
 
     show_key_value_table(
-        "Anime Library Statistics",
+        "AniListSync Statistics",
         {
-            "AniList Entries": len(get_completed_ids()),
-            "MyAnimeList Entries": len(get_completed_mal_ids()),
             "Aliases": len(ALIASES),
             "Search Cache": len(SEARCH_CACHE),
             "Retry Queue": len(retry_queue),
             "Backups": backup_count,
-            "Resume ID": resume.get("last_message_id", 0),
+            "Exports": export_count,
+            "Last Sync": last_sync,
+            "Version": VERSION,
         },
     )
 

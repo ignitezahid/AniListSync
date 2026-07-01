@@ -17,10 +17,11 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 - 🗂 Alias Manager
 - 💾 Search Cache
 - 🛠 Compare & Repair libraries
-- 📊 Statistics dashboard
+- 📊 Statistics (Exports, Last Sync, Version)
 - 💾 Backup, Restore, Import & Export
 - ⚙️ Built-in Settings Manager
-- 🎨 Modern Rich-powered terminal interface
+- 📋 Startup Dashboard
+- 🎨 Rich terminal interface, progress bars
 
 ---
 
@@ -77,7 +78,26 @@ python main.py
 
 ---
 
-# 📋 Main Menu
+# 📋 Dashboard & Main Menu
+
+On startup, a dashboard shows connection status and quick stats before the menu:
+
+```text
+╭──────────────────────────────╮
+│         AniListSync          │
+│ Anime Library Manager 2.3.0  │
+╰──────────────────────────────╯
+
+AniList : Connected ✅
+MAL      : Connected ✅
+Telegram : Connected ✅
+
+Aliases       143
+Search Cache   89
+Retry Queue     2
+
+──────────────────────────────
+```
 
 ```text
 1. 🔄 Sync
@@ -87,6 +107,14 @@ python main.py
 5. 🧰 Tools
 6. 📊 Statistics
 7. 🚪 Exit
+```
+
+During sync, a live progress bar tracks import progress:
+
+```text
+[████████████░░░░░░░░] 153 / 874
+Checking:
+Attack on Titan
 ```
 
 ---
@@ -112,15 +140,14 @@ python main.py
 - [x] Live MyAnimeList synchronization
 - [x] Interactive Search
 - [x] Better export formats
+- [x] Startup dashboard with connection status
+- [x] Enhanced statistics (Exports, Last Sync, Version)
+- [x] Live progress bar during sync
+- [x] Search feedback ("Searching AniList...")
 
 ### v2.4
 
 - [ ] Duplicate alias detection
-- [ ] Improved statistics
-
-### v2.5
-
-- [ ] Dashboard
 - [ ] Library Search
 
 ### v3.0

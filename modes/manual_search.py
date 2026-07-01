@@ -1,3 +1,6 @@
+from rich.progress import BarColumn, Progress, TextColumn
+from rich.table import Column
+
 from utils.ui import show_header, ask, success, warning, pause, console
 from sync import interactive_search, add_selected_anime
 
@@ -17,11 +20,20 @@ def manual_search():
 
         if not selected_anime:
             warning("Cancelled.")
-            pause()
             return
 
-        for anime in selected_anime:
-            if add_selected_anime(anime):
-                success(f"Added: {anime['title']['romaji']}")
+        with Progress(
+            TextColumn("[progress.description]{task.description:<50}", table_column=Column(width=52)),
+            BarColumn(),
+            TextColumn(" {task.completed:>4.0f}/{task.total}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Adding:", total=len(selected_anime))
+
+            for anime in selected_anime:
+                progress.update(task, description=f"Adding:\n{anime['title']['romaji']}")
+                if add_selected_anime(anime):
+                    success(f"Added: {anime['title']['romaji']}")
+                progress.advance(task)
 
         console.print()

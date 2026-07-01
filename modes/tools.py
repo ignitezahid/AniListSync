@@ -461,7 +461,8 @@ async def data_center():
             from modes.alias_manager import alias_manager
             alias_manager()
         elif choice == "6":
-            export_search_cache()
+            from modes.search_cache import search_cache_menu
+            search_cache_menu()
         elif choice == "7":
             from modes.retry_queue import retry_queue_menu
             retry_queue_menu()
