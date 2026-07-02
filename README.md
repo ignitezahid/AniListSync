@@ -30,14 +30,14 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 
 | Main Menu | Sync |
 |----------|------|
-| ![](docs/menu.png) |
-| ![](docs/sync.png) |
-| ![](docs/export.png) |
-| ![](docs/library.png) |
-| ![](docs/repair.png) |
-| ![](docs/statistics.png) |
-| ![](docs/retry_queue.png) |
-| ![](docs/live_tracking.png) |
+| ![](docs/menu.png)|
+| ![](docs/sync.png)|
+| ![](docs/export.png)|
+| ![](docs/library.png)|
+| ![](docs/repair.png)|
+| ![](docs/statistics.png)|
+| ![](docs/retry_queue.png)|
+| ![](docs/live_tracking.png)|
 ---
 
 # 🚀 Installation
