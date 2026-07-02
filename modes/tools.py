@@ -224,6 +224,68 @@ def export_markdown(filename, rows, headers):
     return path
 
 
+def export_html(filename, rows, headers):
+    path = export_path(_with_suffix(filename, "html"))
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("<!DOCTYPE html>\n<html>\n<head>\n")
+        f.write("<meta charset=\"utf-8\">\n")
+        f.write("<style>\n")
+        f.write("body { font-family: -apple-system, sans-serif; margin: 20px; }\n")
+        f.write("table { border-collapse: collapse; width: 100%; }\n")
+        f.write("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n")
+        f.write("th { background: #4a90d9; color: white; }\n")
+        f.write("tr:nth-child(even) { background: #f5f5f5; }\n")
+        f.write("</style>\n</head>\n<body>\n")
+        f.write(f"<h2>{filename}</h2>\n")
+        f.write("<table>\n<thead>\n<tr>")
+        for h in headers:
+            f.write(f"<th>{h}</th>")
+        f.write("</tr>\n</thead>\n<tbody>\n")
+        for row in rows:
+            f.write("<tr>")
+            for h in headers:
+                val = str(row.get(h, "")).replace("\n", "<br>")
+                f.write(f"<td>{val}</td>")
+            f.write("</tr>\n")
+        f.write("</tbody>\n</table>\n</body>\n</html>\n")
+
+    return path
+
+
+def export_xlsx(filename, rows, headers):
+    path = export_path(_with_suffix(filename, "xlsx"))
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill
+    except ImportError:
+        warning("openpyxl not installed. Install it with: pip install openpyxl")
+        return None
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = filename
+
+    header_fill = PatternFill(start_color="4A90D9", end_color="4A90D9", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+
+    for row_idx, row in enumerate(rows, 2):
+        for col_idx, h in enumerate(headers, 1):
+            ws.cell(row=row_idx, column=col_idx, value=row.get(h, ""))
+
+    for col_idx, h in enumerate(headers, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = max(12, len(h) + 4)
+
+    wb.save(path)
+    return path
+
+
 def choose_format():
     while True:
         choice = show_menu(
@@ -233,6 +295,8 @@ def choose_format():
                 "CSV",
                 "TXT",
                 "Markdown",
+                "HTML",
+                "Excel (.xlsx)",
                 "Cancel",
             ],
         )
@@ -246,6 +310,10 @@ def choose_format():
         if choice == "4":
             return "md"
         if choice == "5":
+            return "html"
+        if choice == "6":
+            return "xlsx"
+        if choice == "7":
             return None
 
         warning("Invalid choice.")
@@ -818,6 +886,12 @@ def _export_dataset(name, json_data, rows, headers, txt_lines=None):
         path = export_csv(name, rows, headers)
     elif fmt == "txt":
         path = export_txt(name, txt_lines if txt_lines is not None else rows)
+    elif fmt == "html":
+        path = export_html(name, rows, headers)
+    elif fmt == "xlsx":
+        path = export_xlsx(name, rows, headers)
+        if not path:
+            return
     else:
         path = export_markdown(name, rows, headers)
 

@@ -1,7 +1,9 @@
 import asyncio
 import json
 import os
+import time as time_module
 from datetime import datetime, timezone
+from pathlib import Path
 from telethon import events
 
 from rich.progress import BarColumn, Progress, TextColumn
@@ -431,6 +433,8 @@ async def new_saved_message(event):
 async def main() -> None:
     global completed_ids, mal_completed_ids, processed_titles
 
+    sync_start = time_module.time()
+
     stats = {
         "checked": 0,
         "completed": 0,
@@ -483,9 +487,33 @@ async def main() -> None:
 
     try:
         with open("state.json", "w", encoding="utf-8") as f:
-            json.dump({"last_sync": datetime.now(timezone.utc).isoformat()}, f)
+            json.dump({
+                "last_sync": datetime.now(timezone.utc).isoformat(),
+                "anilist_entries": len(completed_ids),
+                "mal_entries": len(mal_completed_ids),
+            }, f)
+    except Exception:
+        pass
+
+    sync_duration = time_module.time() - sync_start
+    try:
+        usage_path = Path("data/usage_stats.json")
+        usage = {}
+        if usage_path.exists():
+            with open(usage_path, encoding="utf-8") as f:
+                usage = json.load(f)
+        durations = usage.get("sync_durations", [])
+        durations.append(round(sync_duration))
+        usage["sync_durations"] = durations[-20:]
+        usage["telegram_found"] = stats["checked"]
+        with open(usage_path, "w", encoding="utf-8") as f:
+            json.dump(usage, f)
     except Exception:
         pass
 
     watcher_ready()
-    await client.run_until_disconnected()
+
+    console.print()
+    warning("Press Enter to return to menu...")
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, input)

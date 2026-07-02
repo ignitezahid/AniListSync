@@ -6,7 +6,9 @@ from config import ANILIST_TOKEN, DEFAULT_STATUS
 from settings import SETTINGS
 from utils.constants import ALIASES_FILE, CACHE_FILE
 from utils.file_utils import load_json, save_json
-from utils.ui import ask, warning
+from rich.table import Table
+
+from utils.ui import ask, console, warning
 from urllib.parse import quote
 
 URL = "https://graphql.anilist.co"
@@ -194,11 +196,10 @@ def test_connection():
     data = graphql_request(query)
 
     if "errors" in data:
-        return False
+        return None
 
     viewer = data["data"]["Viewer"]
-    print(f"Connected as {viewer['name']}")
-    return True
+    return viewer["name"]
 
 
 def search_candidates(title):
@@ -346,7 +347,6 @@ def search_candidates(title):
                 all_candidates[anime["id"]] = anime
 
     if all_candidates:
-        print("DEBUG: candidates =", len(all_candidates))
         top = rank_candidates(all_candidates, title)
         if top:
             return top
@@ -499,17 +499,25 @@ def search_anime(title):
             all_candidates[anime["id"]] = anime
 
     if all_candidates:
-        print("DEBUG: candidates =", len(all_candidates))
         top = rank_candidates(all_candidates, title)
         if top:
-            print("\nPossible matches:\n")
+            table = Table(
+                show_header=True,
+                header_style="bold cyan",
+                box=None,
+            )
+            table.add_column("", width=3)
+            table.add_column("Title", style="white")
+            table.add_column("Match", justify="right", style="green", width=8)
             for i, (score, anime) in enumerate(top, 1):
                 display_title = (
                     anime["title"]["english"]
                     or anime["title"]["romaji"]
                     or anime["title"]["native"]
                 )
-                print(f"{i}. {display_title} ({score:.1f}%)")
+                table.add_row(str(i), display_title, f"{score:.1f}%")
+            console.print("\nPossible Matches\n")
+            console.print(table)
             choice = ask("Choose (1-5, 0=Skip):")
             if choice == "0":
                 SEARCH_CACHE[title] = None
@@ -709,6 +717,14 @@ def get_completed_anime():
               id
               idMal
               episodes
+              seasonYear
+              season
+              studios {
+                nodes {
+                  name
+                }
+              }
+              genres
               title {
                 english
                 romaji
@@ -743,6 +759,15 @@ def get_completed_anime():
             seen_ids.add(media_id)
             title = media.get("title") or {}
 
+            season_order = {"WINTER": 0, "SPRING": 1, "SUMMER": 2, "FALL": 3}
+
+            studios = media.get("studios", {}).get("nodes", []) or []
+            studio_names = [
+                s["name"]
+                for s in studios
+                if isinstance(s, dict) and s.get("name")
+            ]
+
             anime.append({
                 "id": media_id,
                 "idMal": media.get("idMal"),
@@ -753,6 +778,11 @@ def get_completed_anime():
                     or "Unknown title"
                 ),
                 "episodes": media.get("episodes"),
+                "season_year": media.get("seasonYear"),
+                "season": media.get("season"),
+                "season_order": season_order.get(media.get("season"), 0),
+                "studios": studio_names,
+                "genres": media.get("genres") or [],
                 "status": entry.get("status"),
                 "progress": entry.get("progress"),
             })

@@ -7,7 +7,7 @@ from anilist import (
 
 from mal import add_to_list as add_to_mal
 from utils.file_utils import load_json, save_json
-from utils.ui import ask, error, success, warning, show_header, show_menu
+from utils.ui import ask, console, error, pause, success, warning, show_header, show_menu
 
 
 REPAIR_FILE = "missing_anilist.json"
@@ -15,6 +15,53 @@ REPAIR_FILE = "missing_anilist.json"
 
 def save_repair_report(report):
     save_json(REPAIR_FILE, report)
+
+
+def auto_repair(report):
+    threshold = 70
+    repair_list = report.get("missing", [])
+    candidates = []
+
+    for anime in repair_list:
+        aliases = find_similar_aliases(anime["telegram_title"])
+        for item in aliases:
+            if item["score"] >= threshold:
+                candidates.append((anime, item))
+                break
+
+    if not candidates:
+        show_header("Auto Repair")
+        success(f"No candidates above {threshold}% confidence.")
+        pause()
+        return
+
+    show_header("Auto Repair")
+    console.print(f"Confidence: [green]{threshold}%+[/]\n")
+
+    for anime, item in candidates:
+        console.print(
+            f"  [cyan]{anime['telegram_title']}[/]"
+            f"\n  → {item['data']['title']}"
+            f"  [green]({item['score']:.1f}%)[/]\n"
+        )
+
+    confirm = ask(f"Repair all {len(candidates)}? (y/n)").lower()
+    if confirm != "y":
+        warning("Cancelled.")
+        pause()
+        return
+
+    repaired = 0
+    for anime, item in candidates:
+        alias = item["data"]
+        add_to_list(alias["id"])
+        add_to_mal(alias["idMal"], episodes=alias["episodes"])
+        repair_list.remove(anime)
+        repaired += 1
+
+    save_repair_report(report)
+    success(f"Auto repaired {repaired} title(s).")
+    pause()
 
 
 def repair():
@@ -34,17 +81,21 @@ def repair():
             [
                 f"Missing from AniList ({missing_count})",
                 f"Not Found ({not_found_count})",
+                "Auto Repair (70%+)",
                 "Back",
             ],
         )
 
-        if choice == "3" or not choice:
+        if choice == "4" or not choice:
             return
 
         if choice == "1":
             repair_list = report.get("missing", [])
         elif choice == "2":
             repair_list = report.get("not_found", [])
+        elif choice == "3":
+            auto_repair(report)
+            continue
         else:
             continue
 

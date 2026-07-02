@@ -41,30 +41,36 @@ while True:
 
     elif choice == "3":
 
+        from modes.library_search import library_search
+
+        library_search()
+
+    elif choice == "4":
+
         from modes.compare import compare
 
         with client:
             client.loop.run_until_complete(compare())
 
-    elif choice == "4":
+    elif choice == "5":
 
         from modes.repair import repair
 
         repair()
 
-    elif choice == "5":
+    elif choice == "6":
 
         from modes.tools import data_center
 
         client.loop.run_until_complete(data_center())
 
-    elif choice == "6":
+    elif choice == "7":
 
         from modes.statistics import statistics
 
         statistics()
 
-    elif choice == "7":
+    elif choice == "8":
 
         success("Goodbye!")
         break

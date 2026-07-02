@@ -11,16 +11,17 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 - 🔄 Telegram → AniList → MyAnimeList synchronization
 - ⚡ Live Telegram monitoring
 - 🔎 Manual Search
+- 📚 Library Search with status filters & search history
 - 🧠 Smart search with fuzzy matching & alias learning
 - 📚 Franchise Sync
 - 🔁 Retry Queue Manager
-- 🗂 Alias Manager
+- 🗂 Alias Manager with duplicate detection
 - 💾 Search Cache
-- 🛠 Compare & Repair libraries
-- 📊 Statistics (Exports, Last Sync, Version)
-- 💾 Backup, Restore, Import & Export
+- 🛠 Compare & Auto Repair (95%+ confidence)
+- 📊 Enhanced Statistics (cache hits/misses, accuracy, studio/genre/year analysis)
+- 💾 Backup, Restore, Import & Export (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - ⚙️ Built-in Settings Manager
-- 📋 Startup Dashboard
+- 📋 Startup Dashboard with live connection status
 - 🎨 Rich terminal interface, progress bars
 
 ---
@@ -83,30 +84,47 @@ python main.py
 On startup, a dashboard shows connection status and quick stats before the menu:
 
 ```text
-╭──────────────────────────────╮
-│         AniListSync          │
-│ Anime Library Manager 2.3.0  │
-╰──────────────────────────────╯
+╭────────────────────────────────────────────╮
+│               🎌 AniListSync               │
+│        Anime Library Manager v2.4.0        │
+│               by ignitezahid               │
+╰────────────────────────────────────────────╯
 
-AniList : Connected ✅
-MAL      : Connected ✅
-Telegram : Connected ✅
+  Connected as ignitezahid
 
-Aliases       143
-Search Cache   89
-Retry Queue     2
+  ──────────────────────────────────────────────────
 
-──────────────────────────────
+Telegram          🟢 Connected
+AniList           🟢 Connected
+MyAnimeList       🟢 Connected
+
+  ──────────────────────────────────────────────────
+
+Aliases              62
+Search Cache          1
+Retry Queue           0
+Exports               3
+Backups             162
+
+  ──────────────────────────────────────────────────
+
+AniList Entries     1026
+MAL Entries          905
+
+  ──────────────────────────────────────────────────
+
+Last Sync           1 Jul 2026 08:41 PM
 ```
 
 ```text
 1. 🔄 Sync
 2. 🔎 Search
-3. 🔍 Compare
-4. 🛠 Repair
-5. 🧰 Tools
-6. 📊 Statistics
-7. 🚪 Exit
+3. 📚 Library Search
+4. 🔍 Compare
+5. 🛠 Repair
+6. 🧰 Tools
+7. 📊 Statistics
+8. 🚪 Exit
 ```
 
 During sync, a live progress bar tracks import progress:
@@ -121,39 +139,46 @@ Attack on Titan
 
 # 🧰 Built-in Tools
 
-- Export / Import
+- Export / Import (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - Backup / Restore
-- Alias Manager
+- Alias Manager (view, search, edit, merge, delete, detect duplicates)
 - Search Cache
 - Retry Queue Manager
 - Settings (Basic & Advanced)
+- Library Search with status filters (Watching, Completed, Planning, Dropped) & search history
 
 ---
 
 # 🗺️ Roadmap
 
-### v2.3
+### ✅ v2.3
 
-- [x] Rich terminal interface
-- [x] Retry Queue Manager
-- [x] Manual Search
-- [x] Live MyAnimeList synchronization
-- [x] Interactive Search
-- [x] Better export formats
-- [x] Startup dashboard with connection status
-- [x] Enhanced statistics (Exports, Last Sync, Version)
-- [x] Live progress bar during sync
-- [x] Search feedback ("Searching AniList...")
+- [x] 🎨 Rich terminal interface
+- [x] 🔁 Retry Queue Manager
+- [x] 🔎 Manual Search
+- [x] 🔄 Live MyAnimeList synchronization
+- [x] 🧠 Interactive Search
+- [x] 📄 Better export formats
+- [x] 📋 Startup dashboard with connection status
+- [x] 📊 Enhanced statistics (Exports, Last Sync, Version)
+- [x] 📈 Live progress bar during sync
+- [x] 💬 Search feedback ("Searching AniList...")
 
-### v2.4
+### ✅ v2.4
 
-- [ ] Duplicate alias detection
-- [ ] Library Search
+- [x] 📊 Dashboard 2.0 (connection status, entry counts, cached counts)
+- [x] 📚 Library Search with status filters & search history
+- [x] 📈 Better Statistics (cache hits/misses, accuracy, studio/genre/year analysis)
+- [x] 📄 Better Export (HTML, XLSX)
+- [x] 🎨 Better Search (Rich table display)
+- [x] 🧠 Duplicate Alias Detection
+- [x] 🤖 Auto Repair (95%+ confidence)
+- [x] 🕒 Search History (last 5)
 
-### v3.0
+### 🚀 v3.0
 
-- [ ] Desktop GUI
-- [ ] Plugin system
+- [ ] 🖥️ Desktop GUI
+- [ ] 🔌 Plugin system
 
 ---
 

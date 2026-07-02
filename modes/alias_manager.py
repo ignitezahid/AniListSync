@@ -1,6 +1,8 @@
+import re
+
 from anilist import ALIASES, save_alias, search_candidates
 from utils.file_utils import save_json
-from utils.ui import ask, pause, success, warning, show_header, show_key_value_table, show_menu
+from utils.ui import ask, console, pause, success, warning, show_header, show_key_value_table, show_menu
 
 
 def alias_manager():
@@ -15,6 +17,7 @@ def alias_manager():
                 "Edit alias",
                 "Merge aliases",
                 "Delete alias",
+                "Detect duplicates",
                 "Statistics",
                 "Back",
             ],
@@ -42,9 +45,13 @@ def alias_manager():
 
         elif choice == "6":
 
-            alias_statistics()
+            detect_duplicates()
 
         elif choice == "7":
+
+            alias_statistics()
+
+        elif choice == "8":
 
             break
 
@@ -287,6 +294,62 @@ def delete_alias():
     save_json("aliases.json", ALIASES)
 
     success("Alias deleted.")
+    pause()
+
+
+def detect_duplicates():
+
+    def normalize(key):
+        return re.sub(r"[^a-z0-9]", "", key.lower())
+
+    groups = {}
+    for key in ALIASES:
+        normal = normalize(key)
+        groups.setdefault(normal, []).append(key)
+
+    duplicates = {k: v for k, v in groups.items() if len(v) > 1}
+
+    if not duplicates:
+        show_header("Detect Duplicates")
+        success("No duplicate aliases found.")
+        pause()
+        return
+
+    show_header("Detect Duplicates")
+    print(f"Found [green]{sum(len(v) for v in duplicates.values())}[/] duplicate aliases\n")
+
+    any_merged = False
+
+    for normal, keys in duplicates.items():
+        console.print(f"[dim]{'─' * 40}[/]")
+
+        for i, key in enumerate(keys, 1):
+            data = ALIASES[key]
+            title = data.get("title", "?")
+            console.print(f"  {i}. [cyan]{key}[/] -> {title}")
+
+        print()
+        pick = ask("Keep which one? (number, 0 = skip)").strip()
+        if not pick.isdigit():
+            warning("Skipped.")
+            print()
+            continue
+        pick = int(pick)
+        if pick < 1 or pick > len(keys):
+            print()
+            continue
+        keep_key = keys[pick - 1]
+        for key in keys:
+            if key != keep_key:
+                del ALIASES[key]
+        save_json("aliases.json", ALIASES)
+        success(f"Merged into '{keep_key}'.")
+        any_merged = True
+        print()
+
+    if not any_merged:
+        warning("No aliases were merged.")
+
     pause()
 
 
