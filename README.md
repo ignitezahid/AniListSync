@@ -17,7 +17,7 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 - 🔁 Retry Queue Manager
 - 🗂 Alias Manager with duplicate detection
 - 💾 Search Cache
-- 🛠 Compare & Auto Repair (95%+ confidence)
+- 🛠 Compare & Auto Repair (70%+ confidence)
 - 📊 Enhanced Statistics (cache hits/misses, accuracy, studio/genre/year analysis)
 - 💾 Backup, Restore, Import & Export (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - ⚙️ Built-in Settings Manager
@@ -177,14 +177,45 @@ Attack on Titan
 - [x] 📄 Better Export (HTML, XLSX)
 - [x] 🎨 Better Search (Rich table display)
 - [x] 🧠 Duplicate Alias Detection
-- [x] 🤖 Auto Repair (95%+ confidence)
+- [x] 🤖 Auto Repair (70%+ confidence)
 - [x] 🕒 Search History (last 5)
 
-### 🚀 v3.0
 
-- [ ] 🖥️ Desktop GUI
-- [ ] 🔌 Plugin system
+## v2.5
+- [ ] Smart Library Management
+- [ ] Franchise Sync 2.0
+- [ ] Bulk Operations
+- [ ] Performance Improvements
 
+## v2.6
+- [ ] Automation & Scheduled Sync
+- [ ] Advanced Analytics
+- [ ] Improved Dashboard
+- [ ] Quality of Life Improvements
+
+## v2.7
+- [ ] Plugin System
+- [ ] Custom Themes
+- [ ] Enhanced Library Tools
+- [ ] Better Export & Reporting
+
+## v2.8
+- [ ] Cloud Backup
+- [ ] Discord & Telegram Integrations
+- [ ] Web Dashboard
+- [ ] API Improvements
+
+## v2.9
+- [ ] Multi-Profile Support
+- [ ] Advanced Customization
+- [ ] Collection Management
+- [ ] Stability & Optimization
+
+## v3.0
+- [ ] Desktop GUI
+- [ ] Plugin Marketplace
+- [ ] Interactive Analytics
+- [ ] Cross-Platform Installer
 ---
 
 # 🔒 Security
