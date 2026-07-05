@@ -39,7 +39,7 @@ async def compare():
 
         processed.add(title)
 
-        print(f"Checking: {title}")
+        success(f"Checking: {title}")
 
         await asyncio.sleep(1)
 

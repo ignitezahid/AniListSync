@@ -9,15 +9,17 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 ## ✨ Features
 
 - 🔄 Telegram → AniList → MyAnimeList synchronization
-- ⚡ Live Telegram monitoring
-- 🔎 Manual Search
-- 📚 Library Search with status filters & search history
+- ⚡ Live Telegram monitoring with ESC exit
+- 🔎 Manual Search with interactive franchise support
+- 📚 Library Search with status filters, search history & fuzzy fallback
+- 📁 Collection Manager with stats, sorting, export & custom icons
+- 🚀 Bulk Operations (refresh caches, health check, repair, optimize)
 - 🧠 Smart search with fuzzy matching & alias learning
-- 📚 Franchise Sync
+- 📺 Recommended watch order in franchise view
 - 🔁 Retry Queue Manager
 - 🗂 Alias Manager with duplicate detection
 - 💾 Search Cache
-- 🛠 Compare & Auto Repair (70%+ confidence)
+- 🛠 Compare, Auto Repair (70%+ confidence), Library Health scanner
 - 📊 Enhanced Statistics (cache hits/misses, accuracy, studio/genre/year analysis)
 - 💾 Backup, Restore, Import & Export (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - ⚙️ Built-in Settings Manager
@@ -91,7 +93,7 @@ On startup, a dashboard shows connection status and quick stats before the menu:
 ```text
 ╭────────────────────────────────────────────╮
 │               🎌 AniListSync               │
-│        Anime Library Manager v2.4.0        │
+│        Anime Library Manager v2.5.0        │
 │               by ignitezahid               │
 ╰────────────────────────────────────────────╯
 
@@ -105,31 +107,33 @@ MyAnimeList       🟢 Connected
 
   ──────────────────────────────────────────────────
 
-Aliases              62
-Search Cache          1
+Aliases              55
+Search Cache         29
 Retry Queue           0
-Exports               3
-Backups             162
+Exports               4
+Backups              54
 
   ──────────────────────────────────────────────────
 
-AniList Entries     1026
-MAL Entries          905
+AniList Entries     1064
+MAL Entries          938
 
   ──────────────────────────────────────────────────
 
-Last Sync           1 Jul 2026 08:41 PM
+Last Sync           5 Jul 2026 07:32 AM
 ```
 
 ```text
-1. 🔄 Sync
-2. 🔎 Search
-3. 📚 Library Search
-4. 🔍 Compare
-5. 🛠 Repair
-6. 🧰 Tools
-7. 📊 Statistics
-8. 🚪 Exit
+ 1. 🔄  Sync
+ 2. 🔎  Search
+ 3. 📚  Library Search
+ 4. 🗂   Collections
+ 5. 🔍  Compare
+ 6. 🛠   Repair
+ 7. 🧰  Tools
+ 8. 📊  Statistics
+ 9. 🚀  Bulk Operations
+10. 🚪  Exit
 ```
 
 During sync, a live progress bar tracks import progress:
@@ -150,7 +154,10 @@ Attack on Titan
 - Search Cache
 - Retry Queue Manager
 - Settings (Basic & Advanced)
-- Library Search with status filters (Watching, Completed, Planning, Dropped) & search history
+- Library Health Scanner (12 grouped checks)
+- Library Search with status filters, search history & fuzzy fallback
+- Collection Manager (stats, sorting, export, icons)
+- Bulk Operations (refresh, repair, optimize)
 
 ---
 
@@ -180,12 +187,14 @@ Attack on Titan
 - [x] 🤖 Auto Repair (70%+ confidence)
 - [x] 🕒 Search History (last 5)
 
+### ✅ v2.5
 
-## v2.5
-- [ ] Smart Library Management
-- [ ] Franchise Sync 2.0
-- [ ] Bulk Operations
-- [ ] Performance Improvements
+- [x] 📁 Collection Manager (stats, sorting, export, icons, search)
+- [x] 🚀 Bulk Operations (refresh, health, repair, optimize)
+- [x] 📺 Recommended watch order in franchise view
+- [x] 🧹 Fuzzy-matching fallback in library search
+- [x] 📊 Average score in library data (GraphQL)
+- [x] 🛠 Release hardening (ruff cleanup, unused code removal)
 
 ## v2.6
 - [ ] Automation & Scheduled Sync

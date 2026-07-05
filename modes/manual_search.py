@@ -1,7 +1,7 @@
 from rich.progress import BarColumn, Progress, TextColumn
 from rich.table import Column
 
-from utils.ui import show_header, ask, success, warning, pause, console
+from utils.ui import show_header, ask, success, warning, console
 from sync import interactive_search, add_selected_anime
 
 

@@ -1,9 +1,12 @@
 import asyncio
+from asyncio import Queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import msvcrt
 import os
+from pathlib import Path
 import time as time_module
 from datetime import datetime, timezone
-from pathlib import Path
 from telethon import events
 
 from rich.progress import BarColumn, Progress, TextColumn
@@ -17,7 +20,6 @@ from utils.file_utils import load_json, save_json
 from utils.ui import (
     ask,
     console,
-    success,
     warning,
     watcher_ready,
     show_key_value_table,
@@ -26,14 +28,12 @@ from utils.ui import (
 from anilist import (
     search_anime,
     add_to_list,
-    get_completed_ids,
     search_candidates,
     save_alias,
     get_media_with_relations,
 )
 from mal import (
     add_to_list as add_to_mal,
-    get_completed_mal_ids,
 )
 
 def load_resume() -> int:
@@ -59,6 +59,7 @@ completed_ids: set[int] = set()
 mal_completed_ids: set[int] = set()
 
 processed_titles: set[str] = set()
+TITLE_QUEUE: Queue = Queue()
 
 
 def anime_title(anime: dict) -> str:
@@ -71,80 +72,158 @@ def anime_title(anime: dict) -> str:
     )
 
 
+def _start_date_key(anime: dict) -> tuple:
+    sd = anime.get("startDate") or {}
+    return (sd.get("year") or 9999, sd.get("month") or 0, sd.get("day") or 0)
+
+
+def generate_watch_order(selected: dict, related: list[dict]):
+    exclude_types = {"ADAPTATION", "CHARACTER", "ALTERNATIVE"}
+    exclude_formats = {"MUSIC"}
+    all_anime = [selected]
+    for r in related:
+        if r.get("relationType") in exclude_types:
+            continue
+        if r.get("format") in exclude_formats:
+            continue
+        all_anime.append(r)
+
+    all_anime.sort(key=_start_date_key)
+
+    console.print()
+    console.print("Recommended Order")
+    console.print("-" * 40)
+    for i, anime in enumerate(all_anime, 1):
+        sd = anime.get("startDate") or {}
+        y = sd.get("year") or "?"
+        m = str(sd.get("month") or "").zfill(2) if sd.get("month") else "??"
+        d = str(sd.get("day") or "").zfill(2) if sd.get("day") else "??"
+        console.print(f"  {i:>2}. {anime_title(anime)}")
+        console.print(f"       ({y}-{m}-{d})")
+    console.print()
+
+
 def choose_franchise(result: dict) -> list[dict]:
     selected, related = get_media_with_relations(result["id"])
 
     if not selected:
         return [result]
 
-    print()
-    print("Found:")
-    print(anime_title(selected))
+    console.print()
+    console.print("Found:")
+    console.print(anime_title(selected))
 
     if not related:
         return [selected]
 
-    print()
-    print(f"Related anime detected ({len(related)})")
-    print()
+    # Load library IDs to skip completed
+    library_ids = set()
+    try:
+        with open("state.json", encoding="utf-8") as f:
+            state = json.load(f)
+        library_ids = set(state.get("anilist_ids", []))
+    except Exception:
+        pass
 
-    for i, anime in enumerate(related, 1):
-        print(f"{i}. {anime_title(anime)}")
+    in_library = [a for a in related if a["id"] in library_ids]
+    available = [a for a in related if a["id"] not in library_ids]
+
+    console.print()
+
+    if in_library:
+        console.print("Already in library")
+        console.print("─" * 40)
+        for anime in in_library:
+            console.print(f"  ✓ {anime_title(anime)}")
+        console.print()
+
+    if not available:
+        console.print("All related anime already in library.")
+        return [selected]
+
+    # Group available by format
+    format_order = ["TV", "TV_SHORT", "MOVIE", "OVA", "ONA", "SPECIAL", "MUSIC"]
+    format_labels = {"TV_SHORT": "TV Short", "MOVIE": "Movie", "ONA": "ONA", "SPECIAL": "Special", "MUSIC": "Music"}
+    groups = {}
+    for anime in available:
+        fmt = anime.get("format") or "OTHER"
+        groups.setdefault(fmt, []).append(anime)
+
+    console.print("Franchise")
+    console.print("─" * 40)
+    for fmt in format_order:
+        items = groups.get(fmt)
+        if items is None:
+            continue
+        label = format_labels.get(fmt, fmt.title())
+        console.print(f"  {label:<12} {len(items)}")
+        for i, anime in enumerate(items, 1):
+            console.print(f"    {i}. {anime_title(anime)}")
+        console.print()
+    for fmt, items in groups.items():
+        if fmt in format_order:
+            continue
+        console.print(f"  {fmt:<12} {len(items)}")
+        for i, anime in enumerate(items, 1):
+            console.print(f"    {i}. {anime_title(anime)}")
+        console.print()
 
     choice = show_menu(
         "Related Anime",
         [
-            "🔹 Add only selected anime",
-            "📚 Add entire franchise",
+            "🔹 Add selected anime only",
+            "📚 Add all available",
             "🔍 Search another title",
+            "📺 Show recommended watch order",
             "✋ Choose manually",
             "❌ Cancel"
         ],
     )
 
     if choice == "2":
-        return [selected] + related
-    
+        return [selected] + available
+
     elif choice == "3":
         return "search_again"
 
-    if choice == "4":
-        print()
-        print(f"1. {anime_title(selected)}")
+    elif choice == "4":
+        generate_watch_order(selected, related)
+        return "search_again"
 
-        for i, anime in enumerate(related, 2):
-            print(f"{i}. {anime_title(anime)}")
+    if choice == "5":
+        flat = []
+        for fmt in format_order:
+            flat.extend(groups.get(fmt, []))
+        for fmt, items in groups.items():
+            if fmt not in format_order:
+                flat.extend(items)
 
+        console.print(f"  1. {anime_title(selected)}")
+        for i, anime in enumerate(flat, 2):
+            console.print(f"  {i}. {anime_title(anime)}")
         picks = ask("Choose numbers (comma separated):")
 
         chosen = []
-
         for item in picks.split(","):
             item = item.strip()
-
             if not item.isdigit():
                 continue
-
             index = int(item)
-
             if index == 1:
                 chosen.append(selected)
-            elif 2 <= index <= len(related) + 1:
-                chosen.append(related[index - 2])
+            elif 2 <= index <= len(flat) + 1:
+                chosen.append(flat[index - 2])
 
         unique = []
         seen_ids = set()
-
         for anime in chosen:
             if anime["id"] in seen_ids:
                 continue
-
             seen_ids.add(anime["id"])
             unique.append(anime)
-
         return unique
 
-    if choice == "5":
+    if choice == "6":
         return []
 
     return [selected]
@@ -195,13 +274,13 @@ def add_selected_anime(
     media_id = anime["id"]
     title = anime_title(anime)
 
-    print()
-    print(f"Adding: {title}")
+    console.print()
+    console.print(f"Adding: {title}")
 
     if media_id in completed_ids:
         if stats is not None:
             stats["exists"] += 1
-        print("[AniList] Already Exists")
+        console.print("[AniList] Already Exists")
     else:
         if add_to_list(media_id):
             if stats is not None:
@@ -222,22 +301,25 @@ def add_selected_anime(
                 save_retry_queue(retry_queue)
                 retry_queue.append(retry_title)
                 save_retry_queue(retry_queue)
-            print(f"[AniList] Failed: {title}\n")
+            console.print(f"[AniList] Failed: {title}\n")
             return False
 
-    if anime.get("idMal") in mal_completed_ids:
-        print("[MAL] Already Exists\n")
+    mal_id = anime.get("idMal")
+    if not mal_id:
+        console.print("[MAL] No MAL ID — skipped\n")
+    elif mal_id in mal_completed_ids:
+        console.print("[MAL] Already Exists\n")
     else:
         mal_added = add_to_mal(
-            anime.get("idMal"),
+            mal_id,
             episodes=anime.get("episodes"),
         )
         if mal_added == "added":
-            mal_completed_ids.add(anime.get("idMal"))
-            print("[MAL] Added\n")
+            mal_completed_ids.add(mal_id)
+            console.print("[MAL] Added\n")
         elif mal_added == "updated":
-            mal_completed_ids.add(anime.get("idMal"))
-            print("[MAL] Updated\n")
+            mal_completed_ids.add(mal_id)
+            console.print("[MAL] Updated\n")
         else:
             if stats is not None:
                 stats["failed"] += 1
@@ -249,19 +331,41 @@ def add_selected_anime(
                 retry_queue.append(retry_title)
                 save_retry_queue(retry_queue)
 
-            print(f"[MAL] Failed: {title}\n")
+            console.print(f"[MAL] Failed: {title}\n")
             return False
-
     return True
 
 
-
+def add_anime_batch(
+    selected_anime: list[dict],
+    stats: dict | None = None,
+    retry_queue: list[str] | None = None,
+    title: str | None = None,
+) -> bool:
+    max_workers = min(4, len(selected_anime))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(add_selected_anime, anime, stats, retry_queue, title): anime
+            for anime in selected_anime
+        }
+        with Progress(
+            TextColumn("[progress.description]{task.description:<52}", table_column=Column(width=52)),
+            BarColumn(),
+            TextColumn(" {task.completed:>4.0f}/{task.total}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Adding:", total=len(selected_anime))
+            for future in as_completed(futures):
+                if not future.result():
+                    return False
+                progress.advance(task)
+    return True
 
 
 async def import_old_messages(stats: dict, last_message_id: int) -> None:
     global processed_titles
 
-    print("Importing previous Saved Messages...\n")
+    print("Importing from Saved Messages...\n")
 
     if last_message_id:
         print(f"Resuming from message ID: {last_message_id}")
@@ -341,8 +445,6 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
                 save_alias(title, result)
                 break
 
-        selected_anime = choose_franchise(result)
-
         selected_anime = interactive_search(title)
 
         if not selected_anime:
@@ -350,15 +452,9 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
             warning("Cancelled.")
             return
 
-        for anime in selected_anime:
-            if not add_selected_anime(
-                anime,
-                stats,
-                retry_queue,
-                title,
-            ):
-                stats["failed_titles"] += 1
-                return
+        if not add_anime_batch(selected_anime, stats, retry_queue, title):
+            stats["failed_titles"] += 1
+            return
 
         stats["completed"] += 1
 
@@ -371,10 +467,8 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
     all_titles = list(retry_queue)
     title_to_msg_id = {}
 
-    async for message in client.iter_messages("me", reverse=True):
+    async for message in client.iter_messages("me", min_id=last_message_id, reverse=True):
         if not getattr(message, "text", None):
-            continue
-        if message.id <= last_message_id:
             continue
         title = message.text.strip()
         if title and title not in all_titles:
@@ -397,7 +491,9 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
             progress.update(task, description=f"Checking:\n{title}")
 
             if title not in processed_titles:
+                progress.stop()
                 await process_title(title)
+                progress.start()
 
             msg_id = title_to_msg_id.get(title)
             if msg_id:
@@ -416,18 +512,11 @@ async def new_saved_message(event):
         return
 
     print(f"\nNew anime detected: {title}")
+    print(f"Found Message ID: {event.id}")
     await asyncio.sleep(1)
 
-    selected_anime = interactive_search(title)
-
-    if not selected_anime:
-        logger.warning("[NOT FOUND]")
-        return
-
-    for anime in selected_anime:
-        add_selected_anime(anime)
-    print()
-    watcher_ready()
+    await TITLE_QUEUE.put(title)
+    save_resume(event.id)
 
 
 async def main() -> None:
@@ -453,11 +542,21 @@ async def main() -> None:
     backup_file(RETRY_FILE)
 
     print("Loading AniList...")
-    completed_ids = get_completed_ids()
+    cached = {}
+    try:
+        with open("state.json", encoding="utf-8") as f:
+            cached = json.load(f)
+    except Exception:
+        pass
 
+    anilist_ids = cached.get("anilist_ids", [])
+    mal_ids = cached.get("mal_ids", [])
+    completed_ids = set(anilist_ids)
+    mal_completed_ids = set(mal_ids)
+
+    print(f"Loaded {len(anilist_ids)} anime from AniList.")
     print("Loading MyAnimeList...")
-    mal_completed_ids = get_completed_mal_ids()
-    print(f"Loaded {len(mal_completed_ids)} anime from MyAnimeList.")
+    print(f"Loaded {len(mal_ids)} anime from MyAnimeList.")
 
     processed_titles = set()
     last_message_id = load_resume()
@@ -491,6 +590,8 @@ async def main() -> None:
                 "last_sync": datetime.now(timezone.utc).isoformat(),
                 "anilist_entries": len(completed_ids),
                 "mal_entries": len(mal_completed_ids),
+                "anilist_ids": list(completed_ids),
+                "mal_ids": list(mal_completed_ids),
             }, f)
     except Exception:
         pass
@@ -511,9 +612,43 @@ async def main() -> None:
     except Exception:
         pass
 
+    console.print()
     watcher_ready()
 
-    console.print()
-    warning("Press Enter to return to menu...")
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, input)
+    while True:
+
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key == b"\x1b":
+                break
+
+        if not TITLE_QUEUE.empty():
+
+            title = await TITLE_QUEUE.get()
+
+            selected_anime = interactive_search(title)
+
+            if not selected_anime:
+                logger.warning("[NOT FOUND]")
+                continue
+
+            if not add_anime_batch(selected_anime):
+                logger.warning("[FAILED]")
+                continue
+
+            try:
+                with open("state.json", "w", encoding="utf-8") as f:
+                    json.dump({
+                        "last_sync": datetime.now(timezone.utc).isoformat(),
+                        "anilist_entries": len(completed_ids),
+                        "mal_entries": len(mal_completed_ids),
+                        "anilist_ids": list(completed_ids),
+                        "mal_ids": list(mal_completed_ids),
+                    }, f)
+            except Exception:
+                pass
+
+            console.print()
+            watcher_ready()
+
+        await asyncio.sleep(0.05)

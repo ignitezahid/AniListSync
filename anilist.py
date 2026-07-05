@@ -1,3 +1,4 @@
+import json
 import requests
 import time
 import re
@@ -5,11 +6,10 @@ from rapidfuzz import fuzz, process
 from config import ANILIST_TOKEN, DEFAULT_STATUS
 from settings import SETTINGS
 from utils.constants import ALIASES_FILE, CACHE_FILE
-from utils.file_utils import load_json, save_json
+from utils.file_utils import data_file, load_json, save_json
 from rich.table import Table
 
 from utils.ui import ask, console, warning
-from urllib.parse import quote
 
 URL = "https://graphql.anilist.co"
 
@@ -86,6 +86,9 @@ def save_alias(user_title, anime):
 
 SEARCH_CACHE = load_json(CACHE_FILE, {})
 ALIASES = load_json(ALIASES_FILE, {})
+
+ANILIST_LIBRARY_CACHE = data_file("anilist_library.json")
+_anilist_library_cache: list | None = None
 
 
 
@@ -491,7 +494,6 @@ def search_anime(title):
     if not all_candidates:
         if DEBUG:
             print("No candidates. Trying keyword search...")
-        keywords = extract_keywords(title)
         for anime in data["data"]["Page"]["media"]:
             if anime.get("status") == "NOT_YET_RELEASED":
                 continue
@@ -578,7 +580,6 @@ def add_to_list(media_id):
     if "errors" in data:
         for error in data["errors"]:
             message = error.get("message", "")
-            status = error.get("status", 0)
             if message == "Invalid token":
                 print("AniList returned 'Invalid token'. Retrying...")
                 time.sleep(5)
@@ -601,6 +602,12 @@ def get_media_with_relations(media_id):
         idMal
         episodes
         status
+        format
+        startDate {
+          year
+          month
+          day
+        }
         title {
           romaji
           english
@@ -614,7 +621,13 @@ def get_media_with_relations(media_id):
               idMal
               episodes
               status
+              format
               type
+              startDate {
+                year
+                month
+                day
+              }
               title {
                 romaji
                 english
@@ -629,7 +642,13 @@ def get_media_with_relations(media_id):
                     idMal
                     episodes
                     status
+                    format
                     type
+                    startDate {
+                      year
+                      month
+                      day
+                    }
                     title {
                       romaji
                       english
@@ -661,13 +680,13 @@ def get_media_with_relations(media_id):
     related = []
     seen_ids = {media["id"]}
 
-    def add_node(node):
+    def add_node(node, relation_type=None):
         if not node:
             return
 
         if node.get("type") != "ANIME":
             return
-        
+
         if node.get("status") == "NOT_YET_RELEASED":
             return
 
@@ -675,22 +694,39 @@ def get_media_with_relations(media_id):
             return
 
         seen_ids.add(node["id"])
+        if relation_type:
+            node["relationType"] = relation_type
         related.append(node)
 
     # Level 1 + Level 2 relations
     for edge in media.get("relations", {}).get("edges", []):
         node = edge.get("node")
 
-        add_node(node)
+        add_node(node, edge.get("relationType"))
 
         for edge2 in node.get("relations", {}).get("edges", []):
-            add_node(edge2.get("node"))
+            add_node(edge2.get("node"), edge2.get("relationType"))
 
     return media, related
 
 
 
-def get_completed_anime():
+def get_completed_anime(force_refresh: bool = False):
+    global _anilist_library_cache
+
+    if not force_refresh and _anilist_library_cache is not None:
+        return _anilist_library_cache
+
+    cache_path = ANILIST_LIBRARY_CACHE
+    if not force_refresh and cache_path.exists():
+        try:
+            data = json.loads(cache_path.read_text(encoding="utf-8"))
+            if data:
+                _anilist_library_cache = data
+                return _anilist_library_cache
+        except Exception:
+            pass
+
     viewer_query = """
     query {
       Viewer {
@@ -719,6 +755,7 @@ def get_completed_anime():
               episodes
               seasonYear
               season
+              averageScore
               studios {
                 nodes {
                   name
@@ -785,15 +822,22 @@ def get_completed_anime():
                 "genres": media.get("genres") or [],
                 "status": entry.get("status"),
                 "progress": entry.get("progress"),
+                "score": media.get("averageScore"),
             })
+        _anilist_library_cache = anime
+        try:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps(anime, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
 
     return anime
 
 
-def get_completed_ids():
+def get_completed_ids(force_refresh: bool = False):
     return {
         anime["id"]
-        for anime in get_completed_anime()
+        for anime in get_completed_anime(force_refresh=force_refresh)
         if anime.get("id") is not None
     }
 

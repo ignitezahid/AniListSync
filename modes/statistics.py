@@ -8,7 +8,6 @@ from anilist import (
     ALIASES,
     SEARCH_CACHE,
     get_completed_anime,
-    get_completed_ids,
 )
 
 from mal import get_completed_mal_ids
@@ -117,7 +116,7 @@ def statistics():
 
     _section("Library")
     _kv_table([
-        ("AniList", len(get_completed_ids())),
+        ("AniList", len(anime_list)),
         ("MAL", len(get_completed_mal_ids())),
         ("Telegram", telegram_found),
     ])

@@ -1,3 +1,4 @@
+import msvcrt
 from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
@@ -37,7 +38,6 @@ def show_header(title: str):
     console.print()
 
 
-from rich.text import Text
 
 
 def show_app_header(version: str, creator: str):
@@ -83,13 +83,19 @@ def watcher_ready() -> None:
 
     console.print()
     console.print("[bold green]🟢 Watching Saved Messages...[/]")
+    warning("Press ESC to return.")
 
 
 
 def pause():
-    """Pause until the user presses Enter."""
+    """Pause until the user presses ESC."""
 
-    console.input("\n[bold green]Press Enter to continue...[/]")
+    warning("Press ESC to return.")
+    while True:
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key == b"\x1b":
+                break
 
 
 def ask(prompt: str = "Choice:"):

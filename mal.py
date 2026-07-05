@@ -1,17 +1,19 @@
+import json
 import requests
-import webbrowser
 import urllib.parse
 import secrets
 import string
 import time
 
 from config import MAL_CLIENT_ID, MAL_CLIENT_SECRET
-from utils.file_utils import load_json, save_json
+from utils.file_utils import data_file, load_json, save_json
 AUTH_URL = "https://myanimelist.net/v1/oauth2/authorize"
 TOKEN_URL = "https://myanimelist.net/v1/oauth2/token"
 
 REDIRECT_URI = "http://localhost"
 TOKEN_FILE = "mal_tokens.json"
+MAL_LIBRARY_CACHE = data_file("mal_library.json")
+_mal_library_cache: list | None = None
 
 
 def generate_code_verifier():
@@ -125,7 +127,22 @@ def test_connection():
         return False
 
 
-def get_completed_mal_anime():
+def get_completed_mal_anime(force_refresh: bool = False):
+    global _mal_library_cache
+
+    if not force_refresh and _mal_library_cache is not None:
+        return _mal_library_cache
+
+    cache_path = MAL_LIBRARY_CACHE
+    if not force_refresh and cache_path.exists():
+        try:
+            data = json.loads(cache_path.read_text(encoding="utf-8"))
+            if data:
+                _mal_library_cache = data
+                return _mal_library_cache
+        except Exception:
+            pass
+
     access_token = get_access_token()
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -171,6 +188,13 @@ def get_completed_mal_anime():
         if "paging" in data:
             url = data["paging"].get("next")
 
+    _mal_library_cache = anime_list
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(anime_list, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
     return anime_list
 
 
@@ -196,7 +220,10 @@ def get_list_status(mal_id):
         "?fields=my_list_status"
     )
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+    except Exception:
+        return None
 
     if response.status_code != 200:
         return None
@@ -227,11 +254,10 @@ def add_to_list(
 
     url = f"https://api.myanimelist.net/v2/anime/{mal_id}/my_list_status"
 
-    response = requests.put(
-        url,
-        headers=headers,
-        data=data
-    )
+    try:
+        response = requests.put(url, headers=headers, data=data, timeout=15)
+    except Exception:
+        return "failed"
 
     if response.status_code == 200:
         if existing:

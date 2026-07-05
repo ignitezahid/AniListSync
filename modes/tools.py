@@ -1,8 +1,12 @@
 import csv
 import json
+import msvcrt
 import re
+import time
 from pathlib import Path
 from shutil import copy2
+
+import requests
 
 from utils.backup import backup_file
 from utils.constants import (
@@ -16,7 +20,7 @@ from utils.constants import (
 )
 from utils.file_utils import data_file, load_json, save_json
 
-from utils.ui import ask, error, success, warning, show_header, show_menu
+from utils.ui import ask, error, pause, success, warning, show_header, show_menu
 
 
 
@@ -287,19 +291,23 @@ def export_xlsx(filename, rows, headers):
 
 
 def choose_format():
+    xlsx_available = True
+    try:
+        import openpyxl  # noqa: F401
+    except ImportError:
+        xlsx_available = False
+
     while True:
-        choice = show_menu(
-            "Export Format",
-            [
-                "JSON",
-                "CSV",
-                "TXT",
-                "Markdown",
-                "HTML",
-                "Excel (.xlsx)",
-                "Cancel",
-            ],
-        )
+        options = [
+            "JSON",
+            "CSV",
+            "TXT",
+            "Markdown",
+            "HTML",
+            "Excel (.xlsx)" + ("" if xlsx_available else " [dim](requires: pip install openpyxl)[/]"),
+            "Cancel",
+        ]
+        choice = show_menu("Export Format", options)
 
         if choice == "1":
             return "json"
@@ -312,6 +320,9 @@ def choose_format():
         if choice == "5":
             return "html"
         if choice == "6":
+            if not xlsx_available:
+                warning("openpyxl not installed. Install it with: pip install openpyxl")
+                continue
             return "xlsx"
         if choice == "7":
             return None
@@ -498,6 +509,88 @@ def settings_editor(mode):
         success("Saved.")
 
 
+def bulk_operations():
+    while True:
+        choice = show_menu(
+            "Bulk Operations",
+            [
+                "Refresh all MAL IDs",
+                "Refresh all AniList IDs",
+                "Refresh Library Caches",
+                "Refresh Search Cache",
+                "Retry Failed Titles",
+                "Remove Duplicate Aliases",
+                "Clean Old Backups",
+                "Rebuild Statistics",
+                "Verify Library",
+                "Back",
+            ],
+        )
+
+        if choice == "1":
+            from mal import get_completed_mal_ids
+            print("Refreshing MAL IDs from API...")
+            mal_ids = list(get_completed_mal_ids(force_refresh=True))
+            with open("state.json", encoding="utf-8") as f:
+                state = json.load(f)
+            state["mal_ids"] = mal_ids
+            with open("state.json", "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+            success(f"Refreshed {len(mal_ids)} MAL IDs.")
+
+        elif choice == "2":
+            from anilist import get_completed_ids
+            print("Refreshing AniList IDs from API...")
+            anilist_ids = list(get_completed_ids(force_refresh=True))
+            with open("state.json", encoding="utf-8") as f:
+                state = json.load(f)
+            state["anilist_ids"] = anilist_ids
+            with open("state.json", "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+            success(f"Refreshed {len(anilist_ids)} AniList IDs.")
+
+        elif choice == "3":
+            from anilist import get_completed_ids as get_anilist_ids
+            from mal import get_completed_mal_ids
+            print("Refreshing all library caches from API...")
+            anilist_ids = list(get_anilist_ids(force_refresh=True))
+            mal_ids = list(get_completed_mal_ids(force_refresh=True))
+            with open("state.json", encoding="utf-8") as f:
+                state = json.load(f)
+            state["anilist_ids"] = anilist_ids
+            state["mal_ids"] = mal_ids
+            with open("state.json", "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+            success(f"Refreshed {len(anilist_ids)} AniList + {len(mal_ids)} MAL IDs.")
+
+        elif choice == "4":
+            from modes.search_cache import search_cache
+            search_cache()
+
+        elif choice == "5":
+            from modes.retry_queue import retry_queue_menu
+            retry_queue_menu()
+
+        elif choice == "6":
+            from modes.alias_manager import detect_duplicates
+            detect_duplicates()
+
+        elif choice == "7":
+            _clean_old_backups()
+
+        elif choice == "8":
+            from modes.statistics import statistics
+            statistics()
+
+        elif choice == "9":
+            library_health()
+
+        elif choice == "10":
+            break
+        else:
+            warning("Invalid choice.")
+
+
 async def data_center():
     ensure_exports()
 
@@ -513,6 +606,7 @@ async def data_center():
                 "Search Cache",
                 "Retry Queue",
                 "Settings",
+                "Library Health",
                 "Back",
             ],
         )
@@ -539,6 +633,9 @@ async def data_center():
             settings_home()
 
         elif choice == "9":
+            library_health()
+
+        elif choice == "10":
             break
         else:
             warning("Invalid choice.")
@@ -1031,6 +1128,483 @@ def _with_suffix(filename, suffix):
         return path.name
 
     return f"{filename}.{suffix}"
+
+
+def _clean_old_backups(keep: int = 50):
+    """Remove oldest backups, keeping the most recent `keep`."""
+
+    path = Path(BACKUP_DIR)
+    if not path.is_dir():
+        warning("No backup directory found.")
+        return
+
+    backups = sorted(path.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+    if len(backups) <= keep:
+        success(f"Only {len(backups)} backups, nothing to clean.")
+        return
+
+    to_remove = backups[keep:]
+    for b in to_remove:
+        try:
+            b.unlink()
+        except Exception:
+            pass
+
+    success(f"Removed {len(to_remove)} old backups, kept {keep}.")
+    pause()
+
+
+def _health_input():
+    """Read input with ESC support. Returns the string or None if ESC pressed."""
+    buf = ""
+    while True:
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key == b"\x1b":
+                return None
+            if key == b"\r":
+                return buf
+            if key == b"\x7f" or key == b"\x08":
+                buf = buf[:-1]
+                print("\b \b", end="", flush=True)
+            elif key in (b"\xe0", b"\x00"):
+                msvcrt.getch()
+            else:
+                try:
+                    ch = key.decode("utf-8")
+                    buf += ch
+                    print(ch, end="", flush=True)
+                except UnicodeDecodeError:
+                    pass
+
+def _export_health_report(pct, groups, issues):
+    from datetime import datetime
+
+    name = f"health_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    rows = []
+    for group_name, items in groups:
+        for name, status in items:
+            rows.append({"Section": f"{group_name} / {name}", "Status": status})
+    if issues:
+        for issue in issues:
+            rows.append({"Section": "Suggestion", "Status": issue})
+    rows.append({"Section": "Overall", "Status": f"{pct}%"})
+
+    json_data = {
+        "health_pct": pct,
+        "timestamp": datetime.now().isoformat(),
+        "groups": [
+            {
+                "group": group_name,
+                "checks": [{"name": n, "status": s} for n, s in items],
+            }
+            for group_name, items in groups
+        ],
+        "issues": issues,
+    }
+
+    _export_dataset(name, json_data, rows, ["Section", "Status"])
+
+
+def library_health():
+    from settings import DEFAULT_SETTINGS
+
+    show_header("Library Health")
+    print()
+
+    issues = []
+    total_checks = 12
+    passed = 0
+
+    # 1. Aliases
+    print("Checking aliases...")
+    aliases = load_json(ALIASES_FILE, {})
+    broken = [k for k, v in aliases.items() if not v or not v.get("id")]
+    dup_count = 0
+    seen = set()
+    for k, v in aliases.items():
+        key = re.sub(r"[^a-zA-Z0-9]", "", k).lower()
+        if key in seen:
+            dup_count += 1
+        seen.add(key)
+    if broken:
+        issues.append(f"⚠ {len(broken)} broken aliases")
+    else:
+        passed += 1
+    if dup_count:
+        issues.append(f"⚠ {dup_count} duplicate aliases")
+    else:
+        passed += 1
+
+    # 2. Search Cache
+    print("Checking cache...")
+    cache = load_json(CACHE_FILE, {})
+    cache_age_days = None
+    try:
+        mtime = Path(CACHE_FILE).stat().st_mtime
+        cache_age_days = int((time.time() - mtime) / 86400)
+    except Exception:
+        pass
+    if cache:
+        if cache_age_days is not None and cache_age_days > 30:
+            issues.append(f"⚠ Cache hasn't been refreshed in {cache_age_days} days ({len(cache)} entries)")
+        else:
+            passed += 1
+    else:
+        issues.append("⚠ Search cache is empty")
+
+    # 3. Retry Queue
+    print("Checking retry queue...")
+    retry = load_json(RETRY_FILE, [])
+    if retry:
+        issues.append(f"⚠ {len(retry)} entries in retry queue")
+    else:
+        passed += 1
+
+    # 4. Resume File
+    print("Checking resume file...")
+    resume = load_json(RESUME_FILE, {})
+    resume_ok = True
+    if not resume:
+        issues.append("⚠ Resume file is missing or empty")
+        resume_ok = False
+    else:
+        msg_id = resume.get("last_message_id")
+        if msg_id is None or not isinstance(msg_id, int) or msg_id < 0:
+            issues.append("⚠ Resume file has invalid last_message_id")
+            resume_ok = False
+    if resume_ok:
+        passed += 1
+
+    # 5. Backups
+    print("Checking backups...")
+    backup_count = 0
+    try:
+        backup_path = Path(BACKUP_DIR)
+        if backup_path.is_dir():
+            backup_count = len(list(backup_path.iterdir()))
+    except Exception:
+        pass
+    if backup_count > 50:
+        issues.append(f"⚠ Large backup folder ({backup_count} backups)")
+    else:
+        passed += 1
+
+    # 6. Export Folder
+    print("Checking exports...")
+    export_issues = 0
+    export_path = Path(EXPORT_DIR)
+    if not export_path.is_dir():
+        issues.append("⚠ Export folder is missing")
+        export_issues += 1
+    else:
+        export_files = list(export_path.iterdir())
+        if not export_files:
+            issues.append("⚠ Export folder is empty")
+            export_issues += 1
+        else:
+            corrupted = 0
+            for f in export_files:
+                if f.suffix == ".json":
+                    try:
+                        json.loads(f.read_text(encoding="utf-8"))
+                    except Exception:
+                        corrupted += 1
+            if corrupted:
+                issues.append(f"⚠ {corrupted} corrupted export files")
+                export_issues += 1
+    if not export_issues:
+        passed += 1
+
+    # 7. Configuration
+    print("Checking configuration...")
+    settings = load_json(SETTINGS_FILE, {})
+    config_issues = 0
+    if not isinstance(settings, dict):
+        issues.append("⚠ Settings file is corrupted")
+        config_issues += 1
+    else:
+        missing = [k for k in DEFAULT_SETTINGS if k not in settings]
+        if missing:
+            issues.append(f"⚠ {len(missing)} missing settings")
+            config_issues += 1
+        unknown = [k for k in settings if k not in DEFAULT_SETTINGS]
+        if unknown:
+            issues.append(f"⚠ {len(unknown)} unknown settings keys")
+            config_issues += 1
+        invalid = []
+        for k, v in DEFAULT_SETTINGS.items():
+            if k in settings and settings[k] is not None:
+                if not isinstance(settings[k], type(v)):
+                    invalid.append(k)
+        if invalid:
+            issues.append(f"⚠ {len(invalid)} settings with wrong type")
+            config_issues += 1
+    if not config_issues:
+        passed += 1
+
+    # 8. MAL missing IDs
+    print("Checking MAL library...")
+    missing_mal = 0
+    try:
+        with open("state.json", encoding="utf-8") as f:
+            state = json.load(f)
+        mal_ids = state.get("mal_ids", [])
+        missing_mal = sum(1 for mid in mal_ids if not mid)
+        if missing_mal:
+            issues.append(f"⚠ {missing_mal} entries missing MAL IDs")
+        else:
+            passed += 1
+    except Exception:
+        pass
+
+    # 9. API Credentials
+    from config import ANILIST_TOKEN
+    print("Checking API credentials...")
+
+    cred_issues = 0
+    if not ANILIST_TOKEN or ANILIST_TOKEN == "your_anilist_access_token":
+        issues.append("⚠ AniList token missing or placeholder")
+        cred_issues += 1
+    else:
+        try:
+            r = requests.post(
+                "https://graphql.anilist.co",
+                json={"query": "{ Viewer { id } }"},
+                headers={"Authorization": f"Bearer {ANILIST_TOKEN}"},
+                timeout=10,
+            )
+            if r.status_code != 200:
+                issues.append("⚠ AniList token is invalid or expired")
+                cred_issues += 1
+        except Exception:
+            issues.append("⚠ Could not verify AniList token")
+            cred_issues += 1
+
+    mal_tokens = load_json("mal_tokens.json", {})
+    if not mal_tokens or not mal_tokens.get("access_token"):
+        issues.append("⚠ MAL tokens missing")
+        cred_issues += 1
+    else:
+        expires = mal_tokens.get("expires_at", 0)
+        if time.time() >= expires:
+            issues.append("⚠ MAL token is expired")
+            cred_issues += 1
+
+    if not cred_issues:
+        passed += 1
+
+    # 10. Telegram
+    print("Checking Telegram...")
+    from config import API_ID, API_HASH
+
+    telegram_ok = True
+    if not API_ID or API_ID == 0:
+        issues.append("⚠ Telegram API_ID not configured")
+        telegram_ok = False
+    if not API_HASH or API_HASH == "your_telegram_api_hash":
+        issues.append("⚠ Telegram API_HASH not configured")
+        telegram_ok = False
+    if not Path("telegram_session.session").exists():
+        issues.append("⚠ Telegram session file missing")
+        telegram_ok = False
+    if telegram_ok:
+        passed += 1
+
+    # 11. AniList library validation
+    print("Checking AniList library...")
+    anilist_ok = True
+    try:
+        with open("state.json", encoding="utf-8") as f:
+            state = json.load(f)
+        anilist_ids = state.get("anilist_ids", [])
+        if not anilist_ids:
+            anilist_ok = False
+    except Exception:
+        anilist_ok = False
+    if anilist_ok:
+        passed += 1
+    else:
+        issues.append("⚠ AniList library not loaded")
+
+    pct = int(passed / total_checks * 100) if total_checks else 100
+    color = "🟢" if pct >= 80 else ("🟡" if pct >= 50 else "🔴")
+
+    show_header(f"Library Health — {pct}% {color}")
+    print()
+
+    groups = [
+        ("Library", [
+            ("Aliases",
+             "✓ OK" if not broken and not dup_count
+             else f"⚠ {len(broken)} broken, {dup_count} dup" if broken and dup_count
+             else f"⚠ {len(broken)} broken" if broken
+             else f"⚠ {dup_count} dup"),
+            ("Retry Queue", "✓ Empty" if not retry else f"⚠ {len(retry)} pending"),
+        ]),
+        ("Storage", [
+            ("Search Cache",
+             f"✓ {len(cache)} entries" if cache and (cache_age_days is None or cache_age_days <= 30)
+             else f"⚠ {len(cache)} entries, {cache_age_days}d" if cache
+             else "⚠ Empty"),
+            ("Exports", "✓ OK" if not export_issues else "⚠ Issues"),
+            ("Backups",
+             f"✓ {backup_count}" if backup_count <= 50 else f"⚠ {backup_count}"),
+        ]),
+        ("Accounts", [
+            ("API Credentials", "✓ OK" if not cred_issues else "⚠ Issues"),
+            ("Telegram", "✓ OK" if telegram_ok else "⚠ Issues"),
+            ("AniList", "✓ OK" if anilist_ok else "⚠ Missing"),
+            ("MyAnimeList", "✓ OK" if not missing_mal else f"⚠ {missing_mal} missing"),
+        ]),
+        ("Configuration", [
+            ("Settings", "✓ OK" if not config_issues else "⚠ Issues"),
+            ("Resume File", "✓ OK" if resume_ok else "⚠ Issues"),
+        ]),
+    ]
+
+    for group_name, items in groups:
+        print(group_name)
+        print("─" * 40)
+        for name, status in items:
+            print(f"  {status}  {name}")
+        print()
+
+    while True:
+        if issues:
+            print("Suggestions")
+            print("─" * 40)
+            for i, issue in enumerate(issues, 1):
+                if "duplicate" in issue.lower():
+                    label = "Merge duplicate aliases"
+                elif "mal id" in issue.lower():
+                    label = "Repair missing MAL IDs"
+                elif "retry" in issue.lower():
+                    label = "Retry failed titles"
+                elif "broken" in issue.lower():
+                    label = "Fix broken aliases"
+                elif "cache" in issue.lower():
+                    label = "Refresh stale cache"
+                elif "backup" in issue.lower():
+                    label = "Clean old backups"
+                elif "resume" in issue.lower():
+                    label = "Review resume file"
+                elif "export" in issue.lower() or "corrupted" in issue.lower():
+                    label = "Review exports"
+                elif "missing setting" in issue.lower():
+                    label = "Add missing settings"
+                elif "unknown setting" in issue.lower():
+                    label = "Review unknown settings"
+                elif "wrong type" in issue.lower():
+                    label = "Fix setting types"
+                elif "token" in issue.lower():
+                    label = "Fix API credentials"
+                elif "telegram" in issue.lower():
+                    label = "Fix Telegram connection"
+                elif "anilist library" in issue.lower():
+                    label = "Sync AniList library"
+                else:
+                    label = issue
+                print(f"  {i}. {label}")
+            print()
+
+        print("  0. Export report")
+        warning("Press ESC to return.")
+        print()
+        print("Fix: ", end="", flush=True)
+
+        choice = _health_input()
+        print()
+        if choice is None:
+            return
+        if choice == "0":
+            _export_health_report(pct, groups, issues)
+            continue
+        if choice.isdigit() and issues:
+            idx = int(choice) - 1
+            issue_types = []
+            for issue in issues:
+                if "duplicate" in issue.lower():
+                    issue_types.append("aliases")
+                elif "mal id" in issue.lower():
+                    issue_types.append("repair")
+                elif "retry" in issue.lower():
+                    issue_types.append("retry")
+                elif "broken" in issue.lower():
+                    issue_types.append("aliases")
+                elif "cache" in issue.lower():
+                    issue_types.append("cache")
+                elif "backup" in issue.lower():
+                    issue_types.append("backup")
+                elif "resume" in issue.lower():
+                    issue_types.append("resume")
+                elif "export" in issue.lower() or "corrupted" in issue.lower():
+                    issue_types.append("export")
+                elif "missing setting" in issue.lower() or "wrong type" in issue.lower():
+                    issue_types.append("config")
+                elif "token" in issue.lower():
+                    issue_types.append("creds")
+                elif "telegram" in issue.lower():
+                    issue_types.append("telegram")
+                elif "anilist library" in issue.lower():
+                    issue_types.append("sync")
+                else:
+                    issue_types.append(None)
+            if 0 <= idx < len(issue_types):
+                action = issue_types[idx]
+                if action == "aliases":
+                    from modes.alias_manager import detect_duplicates
+                    detect_duplicates()
+                    library_health()
+                    return
+                elif action == "repair":
+                    from modes.repair import repair as run_repair
+                    run_repair()
+                    library_health()
+                    return
+                elif action == "retry":
+                    from modes.retry_queue import retry_queue_menu
+                    retry_queue_menu()
+                    library_health()
+                    return
+                elif action == "cache":
+                    from modes.search_cache import search_cache_menu
+                    search_cache_menu()
+                    library_health()
+                    return
+                elif action == "backup":
+                    _clean_old_backups()
+                    continue
+                elif action == "resume":
+                    save_json(RESUME_FILE, {"last_message_id": 0})
+                    success("Resume file reset to last_message_id: 0.")
+                    library_health()
+                    return
+                elif action == "export":
+                    warning("No automated fix — review exports/ folder manually.")
+                    continue
+                elif action == "config":
+                    from settings import DEFAULT_SETTINGS
+                    fixed = dict(settings)
+                    for k, v in DEFAULT_SETTINGS.items():
+                        fixed.setdefault(k, v)
+                    fixed = {k: v for k, v in fixed.items() if k in DEFAULT_SETTINGS}
+                    for k, v in DEFAULT_SETTINGS.items():
+                        if k in fixed and fixed[k] is not None and not isinstance(fixed[k], type(v)):
+                            fixed[k] = v
+                    save_json(SETTINGS_FILE, fixed)
+                    success("Configuration repaired.")
+                    library_health()
+                    return
+                elif action == "creds":
+                    warning("No automated fix — check config.py and mal_tokens.json manually.")
+                    continue
+                elif action == "telegram":
+                    warning("No automated fix — check config.py and telegram_session.session manually.")
+                    continue
+                elif action == "sync":
+                    warning("Run a full sync to populate library data.")
+                    continue
 
 
 

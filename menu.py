@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,9 +13,13 @@ from utils.ui import console, show_menu
 from anilist import (
     ALIASES,
     SEARCH_CACHE,
+    get_completed_ids,
     test_connection as test_anilist,
 )
-from mal import test_connection as test_mal
+from mal import (
+    get_completed_mal_ids,
+    test_connection as test_mal,
+)
 from utils.constants import BACKUP_DIR, EXPORT_DIR, RETRY_FILE
 from utils.file_utils import load_json
 
@@ -115,8 +120,27 @@ def show_dashboard():
     console.print()
 
     state = _load_state()
-    anilist_count = state.get("anilist_entries", "?")
-    mal_count = state.get("mal_entries", "?")
+
+    try:
+        anilist_ids = list(get_completed_ids())
+        mal_ids = list(get_completed_mal_ids())
+        anilist_count = len(anilist_ids)
+        mal_count = len(mal_ids)
+    except Exception:
+        anilist_count = state.get("anilist_entries", "?")
+        mal_count = state.get("mal_entries", "?")
+
+    try:
+        with open("state.json", "w", encoding="utf-8") as f:
+            json.dump({
+                "last_sync": datetime.now(timezone.utc).isoformat(),
+                "anilist_entries": anilist_count,
+                "mal_entries": mal_count,
+                "anilist_ids": anilist_ids,
+                "mal_ids": mal_ids,
+            }, f)
+    except Exception:
+        pass
 
     entry_table = Table(show_header=False, box=None, pad_edge=False)
     entry_table.add_column("", style="white", width=18)
@@ -146,10 +170,12 @@ def show_main_menu():
             "🔄  Sync",
             "🔎  Search",
             "📚  Library Search",
+            "🗂   Collections",
             "🔍  Compare",
-            "🛠  Repair",
+            "🛠   Repair",
             "🧰  Tools",
             "📊  Statistics",
+            "🚀  Bulk Operations",
             "🚪  Exit",
         ],
     )
