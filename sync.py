@@ -465,16 +465,17 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
             save_retry_queue(retry_queue)
 
     # Collect all titles upfront for progress tracking
-    all_titles = set(retry_queue)
+    all_titles = list(retry_queue)
+    seen = set(all_titles)
     title_to_msg_id = {}
-    resume_counter = 0
 
     async for message in client.iter_messages("me", min_id=last_message_id, reverse=True):
         if not getattr(message, "text", None):
             continue
         title = message.text.strip()
-        if title and title not in all_titles:
-            all_titles.add(title)
+        if title and title not in seen:
+            all_titles.append(title)
+            seen.add(title)
             title_to_msg_id[title] = message.id
 
     if not all_titles:
@@ -499,9 +500,7 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
             msg_id = title_to_msg_id.get(title)
             if msg_id:
-                resume_counter += 1
-                if resume_counter % 10 == 0:
-                    save_resume(msg_id)
+                save_resume(msg_id)
 
             progress.advance(task)
 
