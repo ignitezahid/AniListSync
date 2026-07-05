@@ -1,8 +1,7 @@
 from anilist import get_completed_anime
-from utils.file_utils import data_file, save_json, load_json
-from utils.ui import ask, console, pause, show_header, warning
+from utils.file_utils import data_file, save_json
+from utils.ui import ask, console, show_header
 from difflib import get_close_matches as _fuzzy_match
-from datetime import date
 
 HISTORY_FILE = "search_history.json"
 MAX_HISTORY = 5
@@ -48,16 +47,16 @@ def _add_to_history(query):
 
 
 def library_search():
+    show_header("Library Search")
+
+    history = _load_history()
+    if history:
+        console.print("[bold cyan]Recent Searches[/]")
+        for i, h in enumerate(history, 1):
+            console.print(f"  {i}. {h}")
+        console.print()
+
     while True:
-        show_header("Library Search")
-
-        history = _load_history()
-        if history:
-            console.print("[bold cyan]Recent Searches[/]")
-            for i, h in enumerate(history, 1):
-                console.print(f"  {i}. {h}")
-            console.print()
-
         query = ask("Search (Enter to go back):")
         if not query:
             return
@@ -142,53 +141,4 @@ def library_search():
             console.print(f"  {i}. {title}  {details}")
 
         console.print()
-        console.print("  [c]  Save to collection")
-        console.print("  [Enter]  Back")
         console.print()
-        action = ask("Action:")
-        if action.lower() == "c":
-            collections = load_json("collections.json", {})
-            if not collections:
-                warning("No collections exist. Create one from the Collection Manager first.")
-            else:
-                names = sorted(collections.keys())
-                console.print()
-                for i, name in enumerate(names, 1):
-                    col = collections[name]
-                    icon = col.get("icon", "📁") if isinstance(col, dict) else "📁"
-                    entries = col.get("entries", col) if isinstance(col, dict) else col
-                    console.print(f"  {i}. {icon} {name} [dim]({len(entries)})[/]")
-                console.print()
-                pick = ask("Collection number:")
-                if pick.isdigit():
-                    idx = int(pick) - 1
-                    if 0 <= idx < len(names):
-                        col_name = names[idx]
-                        col = collections[col_name]
-                        if isinstance(col, list):
-                            col = {"icon": "📁", "entries": col}
-                            collections[col_name] = col
-                        existing_ids = {e["id"] for e in col["entries"]}
-                        added = 0
-                        skipped = 0
-                        for anime in filtered[:30]:
-                            if anime["id"] in existing_ids:
-                                skipped += 1
-                            else:
-                                col["entries"].append({
-                                    "id": anime["id"],
-                                    "idMal": anime.get("idMal"),
-                                    "title": anime.get("title") or anime.get("romaji") or "Unknown",
-                                    "added_at": str(date.today()),
-                                })
-                                existing_ids.add(anime["id"])
-                                added += 1
-                        if added or skipped:
-                            from utils.file_utils import save_json
-                            save_json("collections.json", collections)
-                            console.print(f"  [green]Added: {added}[/]  [yellow]Already existed: {skipped}[/]")
-                        else:
-                            warning("Nothing to add.")
-                        continue
-
-        pause()
