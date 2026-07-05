@@ -26,6 +26,14 @@ DEFAULT_SETTINGS = {
     "fuzzy_matching": True,
     "interactive_search": True,
     "confirm_before_sync": False,
+
+    # Automation
+    "automation_enabled": False,
+    "automation_interval_minutes": 30,
+    "sync_on_startup": False,
+    "live_tracking_on_startup": False,
+    "auto_backup_before_sync": False,
+    "auto_health_after_sync": False,
 }
 
 

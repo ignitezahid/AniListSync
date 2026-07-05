@@ -20,7 +20,7 @@ from utils.constants import (
 )
 from utils.file_utils import data_file, load_json, save_json
 
-from utils.ui import ask, error, pause, success, warning, show_header, show_menu
+from utils.ui import ask, error, success, warning, show_header, show_menu
 
 
 
@@ -1151,7 +1151,6 @@ def _clean_old_backups(keep: int = 50):
             pass
 
     success(f"Removed {len(to_remove)} old backups, kept {keep}.")
-    pause()
 
 
 def _health_input():
@@ -1206,18 +1205,14 @@ def _export_health_report(pct, groups, issues):
     _export_dataset(name, json_data, rows, ["Section", "Status"])
 
 
-def library_health():
+def _compute_health_score() -> tuple:
+    """Compute health score without any output. Returns (pct, groups, issues)."""
     from settings import DEFAULT_SETTINGS
-
-    show_header("Library Health")
-    print()
 
     issues = []
     total_checks = 12
     passed = 0
 
-    # 1. Aliases
-    print("Checking aliases...")
     aliases = load_json(ALIASES_FILE, {})
     broken = [k for k, v in aliases.items() if not v or not v.get("id")]
     dup_count = 0
@@ -1227,17 +1222,11 @@ def library_health():
         if key in seen:
             dup_count += 1
         seen.add(key)
-    if broken:
-        issues.append(f"⚠ {len(broken)} broken aliases")
-    else:
+    if not broken and not dup_count:
         passed += 1
-    if dup_count:
-        issues.append(f"⚠ {dup_count} duplicate aliases")
-    else:
+    if not dup_count:
         passed += 1
 
-    # 2. Search Cache
-    print("Checking cache...")
     cache = load_json(CACHE_FILE, {})
     cache_age_days = None
     try:
@@ -1245,39 +1234,24 @@ def library_health():
         cache_age_days = int((time.time() - mtime) / 86400)
     except Exception:
         pass
-    if cache:
-        if cache_age_days is not None and cache_age_days > 30:
-            issues.append(f"⚠ Cache hasn't been refreshed in {cache_age_days} days ({len(cache)} entries)")
-        else:
-            passed += 1
-    else:
-        issues.append("⚠ Search cache is empty")
-
-    # 3. Retry Queue
-    print("Checking retry queue...")
-    retry = load_json(RETRY_FILE, [])
-    if retry:
-        issues.append(f"⚠ {len(retry)} entries in retry queue")
-    else:
+    if cache and (cache_age_days is None or cache_age_days <= 30):
         passed += 1
 
-    # 4. Resume File
-    print("Checking resume file...")
+    retry = load_json(RETRY_FILE, [])
+    if not retry:
+        passed += 1
+
     resume = load_json(RESUME_FILE, {})
     resume_ok = True
     if not resume:
-        issues.append("⚠ Resume file is missing or empty")
         resume_ok = False
     else:
         msg_id = resume.get("last_message_id")
         if msg_id is None or not isinstance(msg_id, int) or msg_id < 0:
-            issues.append("⚠ Resume file has invalid last_message_id")
             resume_ok = False
     if resume_ok:
         passed += 1
 
-    # 5. Backups
-    print("Checking backups...")
     backup_count = 0
     try:
         backup_path = Path(BACKUP_DIR)
@@ -1285,22 +1259,16 @@ def library_health():
             backup_count = len(list(backup_path.iterdir()))
     except Exception:
         pass
-    if backup_count > 50:
-        issues.append(f"⚠ Large backup folder ({backup_count} backups)")
-    else:
+    if backup_count <= 100:
         passed += 1
 
-    # 6. Export Folder
-    print("Checking exports...")
     export_issues = 0
     export_path = Path(EXPORT_DIR)
     if not export_path.is_dir():
-        issues.append("⚠ Export folder is missing")
         export_issues += 1
     else:
         export_files = list(export_path.iterdir())
         if not export_files:
-            issues.append("⚠ Export folder is empty")
             export_issues += 1
         else:
             corrupted = 0
@@ -1311,26 +1279,20 @@ def library_health():
                     except Exception:
                         corrupted += 1
             if corrupted:
-                issues.append(f"⚠ {corrupted} corrupted export files")
                 export_issues += 1
     if not export_issues:
         passed += 1
 
-    # 7. Configuration
-    print("Checking configuration...")
     settings = load_json(SETTINGS_FILE, {})
     config_issues = 0
     if not isinstance(settings, dict):
-        issues.append("⚠ Settings file is corrupted")
         config_issues += 1
     else:
         missing = [k for k in DEFAULT_SETTINGS if k not in settings]
         if missing:
-            issues.append(f"⚠ {len(missing)} missing settings")
             config_issues += 1
         unknown = [k for k in settings if k not in DEFAULT_SETTINGS]
         if unknown:
-            issues.append(f"⚠ {len(unknown)} unknown settings keys")
             config_issues += 1
         invalid = []
         for k, v in DEFAULT_SETTINGS.items():
@@ -1338,33 +1300,24 @@ def library_health():
                 if not isinstance(settings[k], type(v)):
                     invalid.append(k)
         if invalid:
-            issues.append(f"⚠ {len(invalid)} settings with wrong type")
             config_issues += 1
     if not config_issues:
         passed += 1
 
-    # 8. MAL missing IDs
-    print("Checking MAL library...")
     missing_mal = 0
     try:
         with open("state.json", encoding="utf-8") as f:
             state = json.load(f)
         mal_ids = state.get("mal_ids", [])
         missing_mal = sum(1 for mid in mal_ids if not mid)
-        if missing_mal:
-            issues.append(f"⚠ {missing_mal} entries missing MAL IDs")
-        else:
+        if not missing_mal:
             passed += 1
     except Exception:
         pass
 
-    # 9. API Credentials
     from config import ANILIST_TOKEN
-    print("Checking API credentials...")
-
     cred_issues = 0
     if not ANILIST_TOKEN or ANILIST_TOKEN == "your_anilist_access_token":
-        issues.append("⚠ AniList token missing or placeholder")
         cred_issues += 1
     else:
         try:
@@ -1375,44 +1328,30 @@ def library_health():
                 timeout=10,
             )
             if r.status_code != 200:
-                issues.append("⚠ AniList token is invalid or expired")
                 cred_issues += 1
         except Exception:
-            issues.append("⚠ Could not verify AniList token")
             cred_issues += 1
-
     mal_tokens = load_json("mal_tokens.json", {})
     if not mal_tokens or not mal_tokens.get("access_token"):
-        issues.append("⚠ MAL tokens missing")
         cred_issues += 1
     else:
         expires = mal_tokens.get("expires_at", 0)
         if time.time() >= expires:
-            issues.append("⚠ MAL token is expired")
             cred_issues += 1
-
     if not cred_issues:
         passed += 1
 
-    # 10. Telegram
-    print("Checking Telegram...")
     from config import API_ID, API_HASH
-
     telegram_ok = True
     if not API_ID or API_ID == 0:
-        issues.append("⚠ Telegram API_ID not configured")
         telegram_ok = False
     if not API_HASH or API_HASH == "your_telegram_api_hash":
-        issues.append("⚠ Telegram API_HASH not configured")
         telegram_ok = False
     if not Path("telegram_session.session").exists():
-        issues.append("⚠ Telegram session file missing")
         telegram_ok = False
     if telegram_ok:
         passed += 1
 
-    # 11. AniList library validation
-    print("Checking AniList library...")
     anilist_ok = True
     try:
         with open("state.json", encoding="utf-8") as f:
@@ -1424,14 +1363,8 @@ def library_health():
         anilist_ok = False
     if anilist_ok:
         passed += 1
-    else:
-        issues.append("⚠ AniList library not loaded")
 
     pct = int(passed / total_checks * 100) if total_checks else 100
-    color = "🟢" if pct >= 80 else ("🟡" if pct >= 50 else "🔴")
-
-    show_header(f"Library Health — {pct}% {color}")
-    print()
 
     groups = [
         ("Library", [
@@ -1449,7 +1382,7 @@ def library_health():
              else "⚠ Empty"),
             ("Exports", "✓ OK" if not export_issues else "⚠ Issues"),
             ("Backups",
-             f"✓ {backup_count}" if backup_count <= 50 else f"⚠ {backup_count}"),
+             f"✓ {backup_count}" if backup_count <= 100 else f"⚠ {backup_count}"),
         ]),
         ("Accounts", [
             ("API Credentials", "✓ OK" if not cred_issues else "⚠ Issues"),
@@ -1462,6 +1395,75 @@ def library_health():
             ("Resume File", "✓ OK" if resume_ok else "⚠ Issues"),
         ]),
     ]
+
+    # Rebuild the issues list for the menu
+    issues = []
+    if broken:
+        issues.append(f"⚠ {len(broken)} broken aliases")
+    if dup_count:
+        issues.append(f"⚠ {dup_count} duplicate aliases")
+    if cache and cache_age_days is not None and cache_age_days > 30:
+        issues.append(f"⚠ Cache hasn't been refreshed in {cache_age_days} days ({len(cache)} entries)")
+    elif not cache:
+        issues.append("⚠ Search cache is empty")
+    if retry:
+        issues.append(f"⚠ {len(retry)} entries in retry queue")
+    if not resume:
+        issues.append("⚠ Resume file is missing or empty")
+    elif not resume_ok:
+        issues.append("⚠ Resume file has invalid last_message_id")
+    if backup_count > 100:
+        issues.append(f"⚠ Large backup folder ({backup_count} backups)")
+    if export_issues:
+        if not export_path.is_dir():
+            issues.append("⚠ Export folder is missing")
+        elif not list(export_path.iterdir()):
+            issues.append("⚠ Export folder is empty")
+        else:
+            issues.append(f"⚠ {corrupted} corrupted export files")
+    if not isinstance(settings, dict):
+        issues.append("⚠ Settings file is corrupted")
+    else:
+        if missing:
+            issues.append(f"⚠ {len(missing)} missing settings")
+        if unknown:
+            issues.append(f"⚠ {len(unknown)} unknown settings keys")
+        if invalid:
+            issues.append(f"⚠ {len(invalid)} settings with wrong type")
+    if missing_mal:
+        issues.append(f"⚠ {missing_mal} entries missing MAL IDs")
+    if cred_issues:
+        if not ANILIST_TOKEN or ANILIST_TOKEN == "your_anilist_access_token":
+            issues.append("⚠ AniList token missing or placeholder")
+        else:
+            issues.append("⚠ AniList token is invalid or expired")
+        if not mal_tokens or not mal_tokens.get("access_token"):
+            issues.append("⚠ MAL tokens missing")
+        elif time.time() >= mal_tokens.get("expires_at", 0):
+            issues.append("⚠ MAL token is expired")
+    if not telegram_ok:
+        if not API_ID or API_ID == 0:
+            issues.append("⚠ Telegram API_ID not configured")
+        if not API_HASH or API_HASH == "your_telegram_api_hash":
+            issues.append("⚠ Telegram API_HASH not configured")
+        if not Path("telegram_session.session").exists():
+            issues.append("⚠ Telegram session file missing")
+    if not anilist_ok:
+        issues.append("⚠ AniList library not loaded")
+
+    return pct, groups, issues
+
+
+def library_health():
+    show_header("Library Health")
+    print()
+
+    pct, groups, issues = _compute_health_score()
+    settings = load_json(SETTINGS_FILE, {})
+    color = "🟢" if pct >= 80 else ("🟡" if pct >= 50 else "🔴")
+
+    show_header(f"Library Health — {pct}% {color}")
+    print()
 
     for group_name, items in groups:
         print(group_name)
@@ -1574,7 +1576,8 @@ def library_health():
                     return
                 elif action == "backup":
                     _clean_old_backups()
-                    continue
+                    library_health()
+                    return
                 elif action == "resume":
                     save_json(RESUME_FILE, {"last_message_id": 0})
                     success("Resume file reset to last_message_id: 0.")

@@ -8,6 +8,7 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 
 ## ✨ Features
 
+- 🤖 Automation & Scheduled Sync (interval config, sync-on-startup, auto backup/health)
 - 🔄 Telegram → AniList → MyAnimeList synchronization
 - ⚡ Live Telegram monitoring with ESC exit
 - 🔎 Manual Search with interactive franchise support
@@ -20,10 +21,10 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 - 🗂 Alias Manager with duplicate detection
 - 💾 Search Cache
 - 🛠 Compare, Auto Repair (70%+ confidence), Library Health scanner
-- 📊 Enhanced Statistics (cache hits/misses, accuracy, studio/genre/year analysis)
+- 📊 Enhanced Statistics (Completion Analytics, Genre Analytics, exportable reports)
 - 💾 Backup, Restore, Import & Export (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - ⚙️ Built-in Settings Manager
-- 📋 Startup Dashboard with live connection status
+- 📋 Startup Dashboard 3.0 with card panels, relative time, health score
 - 🎨 Rich terminal interface, progress bars
 
 ---
@@ -88,52 +89,57 @@ python main.py
 
 # 📋 Dashboard & Main Menu
 
-On startup, a dashboard shows connection status and quick stats before the menu:
+On startup, a dashboard shows connection status, library stats, storage, and sync info in card-style panels:
 
 ```text
 ╭────────────────────────────────────────────╮
 │               🎌 AniListSync               │
-│        Anime Library Manager v2.5.0        │
+│        Anime Library Manager v2.6.0        │
 │               by ignitezahid               │
 ╰────────────────────────────────────────────╯
 
   Connected as ignitezahid
 
-  ──────────────────────────────────────────────────
+╭─── Connections ────────────────────────────╮
+│  Telegram          🟢 Connected              │
+│  AniList           🟢 Connected              │
+│  MyAnimeList       🟢 Connected              │
+│  Automation        🟢 Active (30 min)        │
+╰─────────────────────────────────────────────╯
 
-Telegram          🟢 Connected
-AniList           🟢 Connected
-MyAnimeList       🟢 Connected
+╭─── Library ────────────────────────────────╮
+│  AniList Entries   1064                      │
+│  MAL Entries       938                       │
+│  Aliases           55                        │
+│  Collections       3                         │
+╰─────────────────────────────────────────────╯
 
-  ──────────────────────────────────────────────────
+╭─── Storage ────────────────────────────────╮
+│  Search Cache      29                        │
+│  Retry Queue        0                        │
+│  Exports            4                        │
+│  Backups            50                       │
+╰─────────────────────────────────────────────╯
 
-Aliases              55
-Search Cache         29
-Retry Queue           0
-Exports               4
-Backups              54
-
-  ──────────────────────────────────────────────────
-
-AniList Entries     1064
-MAL Entries          938
-
-  ──────────────────────────────────────────────────
-
-Last Sync           5 Jul 2026 07:32 AM
+╭─── Sync ───────────────────────────────────╮
+│  Last Sync         3 min ago                 │
+│  Next Sync         18h 30m                   │
+│  Health            100%                      │
+╰─────────────────────────────────────────────╯
 ```
 
 ```text
- 1. 🔄  Sync
- 2. 🔎  Search
- 3. 📚  Library Search
- 4. 🗂   Collections
- 5. 🔍  Compare
- 6. 🛠   Repair
- 7. 🧰  Tools
- 8. 📊  Statistics
- 9. 🚀  Bulk Operations
-10. 🚪  Exit
+  1. 🔄  Sync
+  2. 🤖  Automation
+  3. 🔎  Search
+  4. 📚  Library Search
+  5. 🗂   Collections
+  6. 🔍  Compare
+  7. 🛠   Repair
+  8. 🧰  Tools
+  9. 📊  Statistics
+ 10. 🚀  Bulk Operations
+ 11. 🚪  Exit
 ```
 
 During sync, a live progress bar tracks import progress:
@@ -148,6 +154,7 @@ Attack on Titan
 
 # 🧰 Built-in Tools
 
+- 🤖 Automation (scheduled sync, sync-on-startup, auto backup, auto health)
 - Export / Import (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - Backup / Restore
 - Alias Manager (view, search, edit, merge, delete, detect duplicates)
@@ -196,31 +203,36 @@ Attack on Titan
 - [x] 📊 Average score in library data (GraphQL)
 - [x] 🛠 Release hardening (ruff cleanup, unused code removal)
 
-## v2.6
-- [ ] Automation & Scheduled Sync
-- [ ] Advanced Analytics
-- [ ] Improved Dashboard
-- [ ] Quality of Life Improvements
+### ✅ v2.6
 
-## v2.7
+- [x] 🤖 Automation & Scheduled Sync (menu, interval config, sync-on-startup)
+- [x] 📊 Statistics 3.0 (Completion Analytics, Genre Analytics, exportable reports)
+- [x] 📋 Dashboard 3.0 (card-style panels, relative time, countdown, health score)
+- [x] 🔧 Retry queue deduplication (list → set)
+- [x] 🧰 Library Health refactored (`_compute_health_score()` reusable for dashboard)
+- [x] 💾 State.json written less frequently (every 5th sync, preserves timestamps)
+- [x] ⚡ Collection Manager library cache (avoids repeated API calls)
+- [x] 🔄 Auto Backup before sync & Auto Health after sync
+
+### v2.7
 - [ ] Plugin System
 - [ ] Custom Themes
 - [ ] Enhanced Library Tools
 - [ ] Better Export & Reporting
 
-## v2.8
+### v2.8
 - [ ] Cloud Backup
 - [ ] Discord & Telegram Integrations
 - [ ] Web Dashboard
 - [ ] API Improvements
 
-## v2.9
+### v2.9
 - [ ] Multi-Profile Support
 - [ ] Advanced Customization
 - [ ] Collection Management
 - [ ] Stability & Optimization
 
-## v3.0
+### v3.0
 - [ ] Desktop GUI
 - [ ] Plugin Marketplace
 - [ ] Interactive Analytics

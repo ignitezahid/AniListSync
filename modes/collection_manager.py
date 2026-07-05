@@ -37,9 +37,14 @@ def _save(data):
     save_json(COLLECTIONS_FILE, data)
 
 
+_lib_cache: dict | None = None
+
+
 def _lib_lookup() -> dict:
-    """Build {id: anime} map from library for fast scoring."""
-    return {a["id"]: a for a in get_completed_anime()}
+    global _lib_cache
+    if _lib_cache is None:
+        _lib_cache = {a["id"]: a for a in get_completed_anime()}
+    return _lib_cache
 
 
 def _collection_stats(entries: list, lib: dict) -> dict:

@@ -5,6 +5,7 @@ import json
 import msvcrt
 import os
 from pathlib import Path
+import threading
 import time as time_module
 from datetime import datetime, timezone
 from telethon import events
@@ -47,16 +48,18 @@ def save_resume(message_id: int) -> None:
     save_json(RESUME_FILE, {"last_message_id": message_id})
 
 
-def load_retry_queue() -> list[str]:
-    return load_json(RETRY_FILE, [])
+def load_retry_queue() -> set[str]:
+    return set(load_json(RETRY_FILE, []))
 
 
-def save_retry_queue(queue: list[str]) -> None:
-    save_json(RETRY_FILE, queue)
+def save_retry_queue(queue: set[str]) -> None:
+    with _id_lock:
+        save_json(RETRY_FILE, list(queue))
 
 
 completed_ids: set[int] = set()
 mal_completed_ids: set[int] = set()
+_id_lock = threading.Lock()
 
 processed_titles: set[str] = set()
 TITLE_QUEUE: Queue = Queue()
@@ -266,9 +269,9 @@ def interactive_search(title: str):
 
 
 def add_selected_anime(
-    anime: dict,
+    anime: dict | None,
     stats: dict | None = None,
-    retry_queue: list[str] | None = None,
+    retry_queue: set[str] | None = None,
     retry_title: str | None = None,
 ) -> bool:
     media_id = anime["id"]
@@ -297,9 +300,7 @@ def add_selected_anime(
                 and retry_title is not None
                 and retry_title not in retry_queue
             ):
-                retry_queue.append(retry_title)
-                save_retry_queue(retry_queue)
-                retry_queue.append(retry_title)
+                retry_queue.add(retry_title)
                 save_retry_queue(retry_queue)
             console.print(f"[AniList] Failed: {title}\n")
             return False
@@ -328,7 +329,7 @@ def add_selected_anime(
                 and retry_title is not None
                 and retry_title not in retry_queue
             ):
-                retry_queue.append(retry_title)
+                retry_queue.add(retry_title)
                 save_retry_queue(retry_queue)
 
             console.print(f"[MAL] Failed: {title}\n")
@@ -339,7 +340,7 @@ def add_selected_anime(
 def add_anime_batch(
     selected_anime: list[dict],
     stats: dict | None = None,
-    retry_queue: list[str] | None = None,
+    retry_queue: set[str] | None = None,
     title: str | None = None,
 ) -> bool:
     max_workers = min(4, len(selected_anime))
@@ -401,7 +402,7 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
                 if option == "2":
                     stats["not_found"] += 1
                     if title not in retry_queue:
-                        retry_queue.append(title)
+                        retry_queue.add(title)
                         save_retry_queue(retry_queue)
                     logger.warning(
                         f"[NOT FOUND] {title}"
@@ -464,15 +465,16 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
             save_retry_queue(retry_queue)
 
     # Collect all titles upfront for progress tracking
-    all_titles = list(retry_queue)
+    all_titles = set(retry_queue)
     title_to_msg_id = {}
+    resume_counter = 0
 
     async for message in client.iter_messages("me", min_id=last_message_id, reverse=True):
         if not getattr(message, "text", None):
             continue
         title = message.text.strip()
         if title and title not in all_titles:
-            all_titles.append(title)
+            all_titles.add(title)
             title_to_msg_id[title] = message.id
 
     if not all_titles:
@@ -497,7 +499,9 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
             msg_id = title_to_msg_id.get(title)
             if msg_id:
-                save_resume(msg_id)
+                resume_counter += 1
+                if resume_counter % 10 == 0:
+                    save_resume(msg_id)
 
             progress.advance(task)
 
@@ -615,6 +619,8 @@ async def main() -> None:
     console.print()
     watcher_ready()
 
+    state_counter = 0
+
     while True:
 
         if msvcrt.kbhit():
@@ -637,14 +643,16 @@ async def main() -> None:
                 continue
 
             try:
-                with open("state.json", "w", encoding="utf-8") as f:
-                    json.dump({
-                        "last_sync": datetime.now(timezone.utc).isoformat(),
-                        "anilist_entries": len(completed_ids),
-                        "mal_entries": len(mal_completed_ids),
-                        "anilist_ids": list(completed_ids),
-                        "mal_ids": list(mal_completed_ids),
-                    }, f)
+                state_counter += 1
+                if state_counter % 5 == 0:
+                    with open("state.json", "w", encoding="utf-8") as f:
+                        json.dump({
+                            "last_sync": datetime.now(timezone.utc).isoformat(),
+                            "anilist_entries": len(completed_ids),
+                            "mal_entries": len(mal_completed_ids),
+                            "anilist_ids": list(completed_ids),
+                            "mal_ids": list(mal_completed_ids),
+                        }, f)
             except Exception:
                 pass
 
