@@ -11,15 +11,14 @@ from utils.ui import console, show_menu
 from anilist import (
     ALIASES,
     SEARCH_CACHE,
-    get_completed_ids,
     test_connection as test_anilist,
 )
 from mal import (
-    get_completed_mal_ids,
     test_connection as test_mal,
 )
 from utils.constants import BACKUP_DIR, EXPORT_DIR, RETRY_FILE
 from utils.file_utils import load_json
+from core.plugin_loader import plugin_manager
 
 
 def _connection_status(test_fn):
@@ -75,9 +74,9 @@ def show_dashboard():
     header_panel = Panel(
         Text(justify="center")
         .append("\n🎌 AniListSync\n", style="bold bright_cyan")
-        .append(f"Anime Library Manager v{VERSION}\n", style="bold white")
+        .append(f"Anime Library Manager v{VERSION}\n", style=console.get_style("info"))
         .append(f"by {CREATOR}", style="dim"),
-        border_style="bright_blue",
+        border_style=console.get_style("border"),
         box=box.ROUNDED,
         padding=(1, 8),
         expand=False,
@@ -88,12 +87,14 @@ def show_dashboard():
 
     anilist_status, anilist_user = _connection_status(test_anilist)
     if anilist_user:
-        console.print(f"  Connected as [bold cyan]{anilist_user}[/]")
+        console.print(f"  Connected as [info]{anilist_user}[/]")
     console.print()
 
     mal_status, _ = _connection_status(test_mal)
     telegram_status = _telegram_status()
     state = _load_state()
+    anilist_count = state.get("anilist_entries", "?")
+    mal_count = state.get("mal_entries", "?")
 
     from settings import get_setting
 
@@ -138,15 +139,6 @@ def show_dashboard():
     backup_count = len(list(Path(BACKUP_DIR).glob("*")))
     export_count = len(list(Path(EXPORT_DIR).glob("*")))
 
-    try:
-        anilist_ids = list(get_completed_ids())
-        mal_ids = list(get_completed_mal_ids())
-        anilist_count = len(anilist_ids)
-        mal_count = len(mal_ids)
-    except Exception:
-        anilist_count = state.get("anilist_entries", "?")
-        mal_count = state.get("mal_entries", "?")
-
     collections = load_json("collections.json", {})
     collection_count = len(collections)
 
@@ -162,6 +154,7 @@ def show_dashboard():
         f"  Retry Queue        {len(retry_queue)}",
         f"  Exports            {export_count}",
         f"  Backups            {backup_count}",
+        f"  Plugins            {len(plugin_manager.get_plugins())}",
     ]
 
     last_sync = _format_last_sync(state)
@@ -204,17 +197,17 @@ def show_dashboard():
     max_width = max(_visible_width(line) for line in all_lines) if all_lines else 0
 
     conn_text = "\n".join(_pad_line(line, max_width) for line in conn_lines)
-    console.print(Panel(conn_text, title="Connections", border_style="bright_blue", box=box.ROUNDED, padding=(0, 1), expand=False))
+    console.print(Panel(conn_text, title="Connections", border_style=console.get_style("border"), box=box.ROUNDED, padding=(0, 1), expand=False))
 
     lib_text = "\n".join(_pad_line(line, max_width) for line in lib_lines)
-    console.print(Panel(lib_text, title="Library", border_style="bright_blue", box=box.ROUNDED, padding=(0, 1), expand=False))
+    console.print(Panel(lib_text, title="Library", border_style=console.get_style("border"), box=box.ROUNDED, padding=(0, 1), expand=False))
 
     storage_text = "\n".join(_pad_line(line, max_width) for line in storage_lines)
-    console.print(Panel(storage_text, title="Storage", border_style="bright_blue", box=box.ROUNDED, padding=(0, 1), expand=False))
+    console.print(Panel(storage_text, title="Storage", border_style=console.get_style("border"), box=box.ROUNDED, padding=(0, 1), expand=False))
 
     if last_sync:
         sync_text = "\n".join(_pad_line(line, max_width) for line in sync_lines)
-        console.print(Panel(sync_text, title="Sync", border_style="bright_blue", box=box.ROUNDED, padding=(0, 1), expand=False))
+        console.print(Panel(sync_text, title="Sync", border_style=console.get_style("border"), box=box.ROUNDED, padding=(0, 1), expand=False))
 
     console.print()
 
@@ -225,14 +218,22 @@ def show_main_menu():
         [
             "🔄  Sync",
             "🤖  Automation",
+            "",
             "🔎  Search",
             "📚  Library Search",
             "🗂   Collections",
+            "",
+            "📊  Statistics",
+            "",
             "🔍  Compare",
             "🛠   Repair",
-            "🧰  Tools",
-            "📊  Statistics",
             "🚀  Bulk Operations",
+            "",
+            "🧩  Plugins",
+            "",
+            "📋  About",
+            "",
+            "🧰  Tools",
             "🚪  Exit",
         ],
     )

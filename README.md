@@ -24,8 +24,14 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 - 📊 Enhanced Statistics (Completion Analytics, Genre Analytics, exportable reports)
 - 💾 Backup, Restore, Import & Export (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - ⚙️ Built-in Settings Manager
-- 📋 Startup Dashboard 3.0 with card panels, relative time, health score
-- 🎨 Rich terminal interface, progress bars
+- 📋 Startup Dashboard with card panels, relative time, countdown, health score
+- 🧩 Plugin system with Discord RPC, Notifications, Cloud Backup, custom themes
+- 🎮 Discord Rich Presence (sync, automation, statistics, collections, health states)
+- 🔔 Desktop notifications (sync, backup, health scan)
+- ☁️ Cloud Backup (GitHub Releases with auto-cleanup)
+- 🎨 7 built-in themes (Dracula, Catppuccin, Nord, Tokyo Night, Solarized Light, Matrix, Gruvbox)
+- 🎨 Rich terminal interface with live theme switching
+- 📋 About page with version, Python, platform, plugins/themes, diagnostics
 
 ---
 
@@ -94,7 +100,7 @@ On startup, a dashboard shows connection status, library stats, storage, and syn
 ```text
 ╭────────────────────────────────────────────╮
 │               🎌 AniListSync               │
-│        Anime Library Manager v2.6.0        │
+│        Anime Library Manager v2.7.0        │
 │               by ignitezahid               │
 ╰────────────────────────────────────────────╯
 
@@ -119,6 +125,7 @@ On startup, a dashboard shows connection status, library stats, storage, and syn
 │  Retry Queue        0                        │
 │  Exports            4                        │
 │  Backups            50                       │
+│  Plugins            8                         │
 ╰─────────────────────────────────────────────╯
 
 ╭─── Sync ───────────────────────────────────╮
@@ -131,15 +138,23 @@ On startup, a dashboard shows connection status, library stats, storage, and syn
 ```text
   1. 🔄  Sync
   2. 🤖  Automation
+
   3. 🔎  Search
   4. 📚  Library Search
   5. 🗂   Collections
-  6. 🔍  Compare
-  7. 🛠   Repair
-  8. 🧰  Tools
-  9. 📊  Statistics
- 10. 🚀  Bulk Operations
- 11. 🚪  Exit
+
+  6. 📊  Statistics
+
+  7. 🔍  Compare
+  8. 🛠   Repair
+  9. 🚀  Bulk Operations
+
+ 10. 🧩  Plugins
+
+ 11. 📋  About
+
+ 12. 🧰  Tools
+ 13. 🚪  Exit
 ```
 
 During sync, a live progress bar tracks import progress:
@@ -154,6 +169,8 @@ Attack on Titan
 
 # 🧰 Built-in Tools
 
+- 🧩 Plugin Manager (enable/disable, configure, view logs, run commands)
+- 📋 About page (version, Python, platform, plugins, themes, diagnostics)
 - 🤖 Automation (scheduled sync, sync-on-startup, auto backup, auto health)
 - Export / Import (JSON, CSV, TXT, Markdown, HTML, XLSX)
 - Backup / Restore
@@ -165,6 +182,20 @@ Attack on Titan
 - Library Search with status filters, search history & fuzzy fallback
 - Collection Manager (stats, sorting, export, icons)
 - Bulk Operations (refresh, repair, optimize)
+
+---
+
+# 🧩 Plugin System
+
+AniListSync 2.7.0+ supports a plugin system. Each plugin lives in its own folder under `plugins/` and consists of a `manifest.json` and an entry script.
+
+**Built-in plugins:**
+- 🎮 **Discord RPC** — Rich Presence with states for sync, automation, statistics, etc.
+- 🔔 **Notifications** — Windows toast notifications on sync/backup/health
+- ☁️ **Cloud Backup** — zip compression + upload to GitHub Releases (extensible provider system)
+- 🎨 **Themes** — 7 built-in themes (Dracula, Catppuccin, Nord, Tokyo Night, Solarized Light, Matrix, Gruvbox) with live switching
+
+See [`docs/plugins.md`](docs/plugins.md) for the full plugin API documentation.
 
 ---
 
@@ -214,28 +245,38 @@ Attack on Titan
 - [x] ⚡ Collection Manager library cache (avoids repeated API calls)
 - [x] 🔄 Auto Backup before sync & Auto Health after sync
 
-### v2.7
-- [ ] Plugin System
-- [ ] Custom Themes
-- [ ] Enhanced Library Tools
-- [ ] Better Export & Reporting
+### ✅ v2.7 — Plugin System & Integrations
 
-### v2.8
-- [ ] Cloud Backup
+- [x] 🧩 Plugin System (discovery, dependency sorting, permissions, hooks, commands, per-plugin logs/settings)
+- [x] 🎨 7 Themes as Plugins (Dracula, Catppuccin, Nord, Tokyo Night, Solarized Light, Matrix, Gruvbox)
+- [x] 🎮 Discord Rich Presence Plugin (sync, automation, statistics, collections, health states)
+- [x] 🔔 Notifications Plugin (sync finish, backup, health scan, per-type toggles)
+- [x] ☁️ Cloud Backup Plugin (zip compression, GitHub Releases provider, keep-last cleanup)
+- [x] 📋 About Page (version, Python, platform, plugins/themes, diagnostics)
+- [x] 🎛 Plugin Manager (detail view, configure, logs, commands, plugin commands)
+- [x] 📚 Plugin API documentation (`docs/plugins.md`)
+- [x] 📊 Statistics: Genre Analytics, exportable reports, `_kv_table()` alignment
+- [x] 📚 Library Search: ESC exits directly, recent searches once per session, 2 blank lines before prompt
+- [x] 🔄 Sync: resume saves after every title, preserves Telegram message order, no "Adding:" progress bar
+- [x] 📋 Dashboard: uses cached state.json counts (no live API call, matches sync numbers)
+- [x] 🚪 Exit: safe shutdown via `os._exit(0)` — no hanging or GC warnings
+- [x] 🔔 Library Health notification: saves `health_pct` to state.json (fixes 0% bug)
+
+### v2.8 — Cloud & Quality-of-Life
+- [ ] 📦 Plugin Marketplace
+- [ ] ☁️ Cloud Backup providers (S3, Google Drive)
+- [ ] 📊 Better Export & Reporting
+
+### v2.9
+- [ ] Cloud Backup providers (S3, Google Drive)
 - [ ] Discord & Telegram Integrations
 - [ ] Web Dashboard
 - [ ] API Improvements
 
-### v2.9
+### v3.0
 - [ ] Multi-Profile Support
 - [ ] Advanced Customization
-- [ ] Collection Management
-- [ ] Stability & Optimization
-
-### v3.0
 - [ ] Desktop GUI
-- [ ] Plugin Marketplace
-- [ ] Interactive Analytics
 - [ ] Cross-Platform Installer
 ---
 
