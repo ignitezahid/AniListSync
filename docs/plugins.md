@@ -1,6 +1,6 @@
 # Plugin API
 
-AniListSync 2.6.0+ supports a plugin system. Each plugin lives in its own folder under `plugins/` and consists of a `manifest.json` and an entry script.
+AniListSync 2.7.0+ supports a plugin system. Each plugin lives in its own folder under `plugins/` and consists of a `manifest.json` and an entry script.
 
 ---
 
@@ -29,7 +29,7 @@ plugins/
     "repository": "https://github.com/you/AniListSync",
     "license": "MIT",
     "entry": "plugin.py",
-    "min_app_version": "2.6.0",
+    "min_app_version": "2.7.0",
     "max_app_version": "3.0.0",
     "depends": ["other_plugin"],
     "permissions": ["network"]
@@ -48,7 +48,7 @@ plugins/
 | `website` | — | Project website |
 | `repository` | — | Source repo URL |
 | `license` | — | SPDX license identifier |
-| `min_app_version` | — | Minimum AniListSync version (e.g. `"2.6.0"`) |
+| `min_app_version` | — | Minimum AniListSync version (e.g. `"2.7.0"`) |
 | `max_app_version` | — | Maximum AniListSync version |
 | `depends` | — | List of plugin IDs that must be loaded first |
 | `permissions` | — | List of permission strings (see below) |
@@ -106,7 +106,7 @@ Hooks are methods on your Plugin class that the framework calls at specific poin
 | `on_load()` | After plugin is instantiated | — |
 | `on_unload()` | Plugin is disabled | — |
 | `on_startup()` | App starts (after `discover()`) | — |
-| `on_shutdown()` | App exits (menu option 12) | — |
+| `on_shutdown()` | App exits (menu option 13) | — |
 
 ### Sync
 
@@ -185,6 +185,9 @@ Available style names:
 | `error` | `bold red` | Error messages |
 | `info` | `bold blue` | Info messages |
 | `menu` | `bold white` | Menu text |
+| `border` | `bright_blue` | Panel borders |
+
+Theme plugins may also define a `bg_color` property returning a hex string (e.g. `"#282A36"`) for the terminal background, and `None` to leave it unchanged.
 
 Only one theme plugin should be enabled at a time. If multiple are enabled, the last one (in dependency order) wins.
 

@@ -1,0 +1,15 @@
+{
+    "name": "Notifications",
+    "id": "notifications",
+    "version": "1.0.0",
+    "author": "ignitezahid",
+    "description": "Shows Windows toast notifications when sync completes, backups are created, or health scans finish.",
+    "website": "https://github.com/ignitezahid/AniListSync",
+    "repository": "https://github.com/ignitezahid/AniListSync",
+    "license": "MIT",
+    "entry": "plugin.py",
+    "min_app_version": "2.6.0",
+    "permissions": [
+        "notifications"
+    ]
+}

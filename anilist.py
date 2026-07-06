@@ -505,7 +505,7 @@ def search_anime(title):
         if top:
             table = Table(
                 show_header=True,
-                header_style="bold cyan",
+                header_style=console.get_style("title"),
                 box=None,
             )
             table.add_column("", width=3)

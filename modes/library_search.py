@@ -51,7 +51,7 @@ def library_search():
 
     history = _load_history()
     if history:
-        console.print("[bold cyan]Recent Searches[/]")
+        console.print("[title]Recent Searches[/]")
         for i, h in enumerate(history, 1):
             console.print(f"  {i}. {h}")
         console.print()
@@ -97,7 +97,7 @@ def library_search():
         _add_to_history(query)
 
         console.print()
-        console.print("[bold cyan]Filter[/]")
+        console.print("[title]Filter[/]")
         console.print("  1. Watching")
         console.print("  2. Completed")
         console.print("  3. Planning")

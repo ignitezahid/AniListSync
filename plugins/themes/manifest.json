@@ -1,0 +1,14 @@
+{
+    "name": "Themes",
+    "id": "themes",
+    "version": "1.0.0",
+    "type": "theme",
+    "author": "ignitezahid",
+    "description": "Built-in color themes: Dracula, Catppuccin, Nord, Tokyo Night. Switch via plugin commands.",
+    "website": "https://github.com/ignitezahid/AniListSync",
+    "repository": "https://github.com/ignitezahid/AniListSync",
+    "license": "MIT",
+    "entry": "plugin.py",
+    "min_app_version": "2.7.0",
+    "permissions": []
+}

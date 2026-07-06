@@ -15,10 +15,13 @@ theme = Theme(
         "error": "bold red",
         "info": "bold blue",
         "menu": "bold white",
+        "border": "bright_blue",
     }
 )
 
 console = Console(theme=theme)
+
+_theme_pushed = False
 
 
 def show_header(title: str):
@@ -27,8 +30,8 @@ def show_header(title: str):
     console.print()
 
     panel = Panel(
-        Align.center(f"[bold cyan]{title}[/bold cyan]"),
-        border_style="bright_blue",
+        Align.center(f"[title]{title}[/]"),
+        border_style=console.get_style("border"),
         box=box.ROUNDED,
         padding=(0, 3),
         expand=False,
@@ -46,12 +49,12 @@ def show_app_header(version: str, creator: str):
     title = Text(justify="center")
 
     title.append("🎌 AniListSync\n", style="bold bright_cyan")
-    title.append(f"Anime Library Manager v{version}\n", style="bold white")
+    title.append(f"Anime Library Manager v{version}\n", style=console.get_style("info"))
     title.append(f"by {creator}", style="dim")
 
     panel = Panel(
         title,
-        border_style="bright_blue",
+        border_style=console.get_style("border"),
         box=box.ROUNDED,
         padding=(1, 8),
         expand=False,
@@ -82,7 +85,7 @@ def watcher_ready() -> None:
     """Display that the live watcher is ready for new messages."""
 
     console.print()
-    console.print("[bold green]🟢 Watching Saved Messages...[/]")
+    console.print("[success]🟢 Watching Saved Messages...[/]")
     warning("Press ESC to return.")
 
 
@@ -101,12 +104,12 @@ def pause():
 def ask(prompt: str = "Choice:"):
     """Prompt the user for input."""
 
-    return console.input(f"[bold green]{prompt}[/] ").strip()
+    return console.input(f"[menu]{prompt}[/] ").strip()
 
 
 
 def show_menu(title: str, options: list[str]):
-    """Display a menu with numbered options."""
+    """Display a menu with numbered options. Empty strings render as blank separators."""
 
     show_header(title)
 
@@ -116,11 +119,18 @@ def show_menu(title: str, options: list[str]):
         pad_edge=False,
     )
 
-    table.add_column("No", style="bold cyan", width=3)
-    table.add_column("Option", style="white")
+    title_style = console.get_style("title")
+    menu_style = console.get_style("menu")
+    table.add_column("No", style=title_style, width=3)
+    table.add_column("Option", style=menu_style)
 
-    for index, option in enumerate(options, start=1):
-        table.add_row(f"{index}.", option)
+    counter = 0
+    for option in options:
+        if not option:
+            table.add_row("", "")
+        else:
+            counter += 1
+            table.add_row(f"{counter}.", option)
 
     console.print(table)
     console.print()
@@ -135,11 +145,11 @@ def show_key_value_table(title: str, data: dict):
 
     table = Table(
         show_header=True,
-        header_style="bold cyan",
+        header_style=console.get_style("title"),
     )
 
-    table.add_column("Metric", style="white")
-    table.add_column("Value", justify="right", style="green")
+    table.add_column("Metric", style=console.get_style("menu"))
+    table.add_column("Value", justify="right", style=console.get_style("success"))
 
     for key, value in data.items():
         table.add_row(key, str(value))
@@ -155,13 +165,54 @@ def show_list_table(title: str, items: list[str], column_name: str = "Item"):
 
     table = Table(
         show_header=True,
-        header_style="bold cyan",
+        header_style=console.get_style("title"),
     )
 
-    table.add_column("No", justify="right", style="cyan", width=4)
-    table.add_column(column_name, style="white")
+    table.add_column("No", justify="right", style=console.get_style("title"), width=4)
+    table.add_column(column_name, style=console.get_style("menu"))
 
     for i, item in enumerate(items, start=1):
         table.add_row(str(i), item)
 
     console.print(table)
+
+
+def reload_theme():
+    """Apply theme from loaded theme plugins and set terminal background."""
+    global _theme_pushed
+    from core.plugin_loader import plugin_manager
+    if _theme_pushed:
+        console.pop_theme()
+        _theme_pushed = False
+    plugin_themes = plugin_manager.get_theme()
+    if plugin_themes:
+        base = dict(theme.styles)
+        base.update(plugin_themes)
+        console.push_theme(Theme(base), inherit=False)
+        _theme_pushed = True
+
+    _set_terminal_bg(plugin_manager)
+
+
+def _set_terminal_bg(pm):
+    """Set terminal background via OSC escape if a theme plugin defines bg_color."""
+    import sys as _sys
+    bg = None
+    for pid in list(pm._plugins.keys()):
+        if not pm.is_enabled(pid):
+            continue
+        manifest = pm._manifests.get(pid)
+        if manifest and manifest.get("type") == "theme":
+            inst = pm._plugins.get(pid)
+            if inst and hasattr(inst, "bg_color"):
+                bg = inst.bg_color
+                break
+    try:
+        if bg and console.color_system:
+            _sys.stdout.write(f"\x1b]11;{bg}\x1b\\")
+        elif console.color_system:
+            _sys.stdout.write("\x1b]111\x1b\\")
+        if bg or console.color_system:
+            _sys.stdout.flush()
+    except Exception:
+        pass
