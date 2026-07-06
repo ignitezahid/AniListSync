@@ -1,0 +1,16 @@
+{
+    "name": "Discord RPC",
+    "id": "discord_rpc",
+    "version": "1.0.0",
+    "type": "app",
+    "author": "ignitezahid",
+    "description": "Shows AniListSync activity as Discord Rich Presence. Cycles through sync, automation, statistics, collections, and health states in real time.",
+    "website": "https://github.com/ignitezahid/AniListSync",
+    "repository": "https://github.com/ignitezahid/AniListSync",
+    "license": "MIT",
+    "entry": "plugin.py",
+    "min_app_version": "2.6.0",
+    "permissions": [
+        "discord_ipc"
+    ]
+}
