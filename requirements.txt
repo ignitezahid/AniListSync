@@ -3,3 +3,5 @@ requests
 telethon
 rich>=14.0.0
 openpyxl
+pypresence>=4.0.0
+plyer>=2.0.0

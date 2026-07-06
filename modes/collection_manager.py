@@ -2,6 +2,7 @@ from datetime import date, datetime
 from utils.file_utils import load_json, save_json
 from utils.ui import show_header, console, ask, warning, pause, success, error, show_menu
 from anilist import get_completed_anime
+from core.plugin_loader import plugin_manager
 
 COLLECTIONS_FILE = "collections.json"
 SORT_OPTIONS = ["Alphabetical", "Recently Added", "Score", "Year"]
@@ -390,7 +391,7 @@ def _collection_menu(collections: dict) -> str | None:
         console.print("  [dim]No collections yet.[/]\n")
 
     console.print()
-    console.print("  [bold cyan]Options[/]")
+    console.print("  [title]Options[/]")
     console.print("  \\[+]      Create")
     console.print("  \\[e]      Edit (view / add / remove)")
     console.print("  \\[s]      Statistics")
@@ -464,6 +465,7 @@ def _export_collection(collections: dict):
 
 
 def collection_manager():
+    plugin_manager.call_hook("on_collections")
     while True:
         collections = _load()
         choice = _collection_menu(collections)

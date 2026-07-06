@@ -13,6 +13,8 @@ from telethon import events
 from rich.progress import BarColumn, Progress, TextColumn
 from rich.table import Column
 
+from core.plugin_loader import plugin_manager
+
 from telegram_client import client
 from utils import logger
 from utils.backup import backup_file
@@ -334,6 +336,8 @@ def add_selected_anime(
 
             console.print(f"[MAL] Failed: {title}\n")
             return False
+
+    plugin_manager.call_hook("on_anime_added", anime)
     return True
 
 
@@ -527,6 +531,8 @@ async def main() -> None:
 
     sync_start = time_module.time()
 
+    plugin_manager.call_hook("on_sync_start")
+
     stats = {
         "checked": 0,
         "completed": 0,
@@ -614,6 +620,8 @@ async def main() -> None:
             json.dump(usage, f)
     except Exception:
         pass
+
+    plugin_manager.call_hook("on_sync_finish")
 
     console.print()
     watcher_ready()

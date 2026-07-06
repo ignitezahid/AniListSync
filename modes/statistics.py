@@ -16,6 +16,7 @@ from modes.tools import _export_dataset, _health_input
 from utils.constants import BACKUP_DIR, EXPORT_DIR, RETRY_FILE
 from utils.file_utils import load_json
 from utils.ui import console, show_header, warning
+from core.plugin_loader import plugin_manager
 from version import VERSION
 
 
@@ -42,7 +43,7 @@ def _relative_time(iso_str: str) -> str:
 
 
 def _section(title):
-    console.print(f"[bold cyan]{title}[/]")
+    console.print(f"[title]{title}[/]")
 
 
 def _kv_table(rows):
@@ -132,6 +133,7 @@ def _export_stats_report(anime_list, status_counter, total_count, avg_eps, avg_s
 
 
 def statistics():
+    plugin_manager.call_hook("on_statistics")
     retry_queue = load_json(RETRY_FILE, [])
     backup_count = len(list(Path(BACKUP_DIR).glob("*")))
     export_count = len(list(Path(EXPORT_DIR).glob("*")))

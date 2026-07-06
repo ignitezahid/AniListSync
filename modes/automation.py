@@ -1,6 +1,7 @@
 from utils.ui import show_header, console, ask, warning, success
 from utils.backup import backup_file
 from settings import set_setting, get_setting
+from core.plugin_loader import plugin_manager
 
 
 def _status(key: str) -> str:
@@ -19,6 +20,7 @@ def _interval_label() -> str:
 
 
 def automation_menu():
+    plugin_manager.call_hook("on_automation")
     while True:
         show_header("Automation")
         enabled = get_setting("automation_enabled")
@@ -80,7 +82,7 @@ def run_auto_backup():
     if get_setting("auto_backup_before_sync"):
         from utils.constants import ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE
         console.print()
-        console.print("  [bold cyan]Auto Backup[/]")
+        console.print("  [title]Auto Backup[/]")
         for f in [ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE]:
             backup_file(f)
         success("Backup complete.")
@@ -93,5 +95,5 @@ def run_auto_health():
         if pct <= 60:
             from modes.tools import library_health
             console.print()
-            console.print("  [bold cyan]Auto Health Scan[/]")
+            console.print("  [title]Auto Health Scan[/]")
             library_health()

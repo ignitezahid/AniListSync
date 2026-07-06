@@ -22,6 +22,8 @@ from utils.file_utils import data_file, load_json, save_json
 
 from utils.ui import ask, error, success, warning, show_header, show_menu
 
+from core.plugin_loader import plugin_manager
+
 
 
 SETTING_LABELS = {
@@ -870,6 +872,7 @@ def restore_center():
 
     copy2(backup, data_file(original))
     success(f"Restored data/{original}.")
+    plugin_manager.call_hook("on_restore", str(backup))
 
 
 def import_json_file(filename, merge=False, path=None):
@@ -1471,6 +1474,17 @@ def library_health():
         for name, status in items:
             print(f"  {status}  {name}")
         print()
+
+    try:
+        with open("state.json", encoding="utf-8") as f:
+            state = json.load(f)
+        state["health_pct"] = pct
+        with open("state.json", "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except Exception:
+        pass
+
+    plugin_manager.call_hook("on_health_scan")
 
     while True:
         if issues:
