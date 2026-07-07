@@ -2,6 +2,11 @@
 
 > Synchronize your AniList and MyAnimeList libraries from your Telegram Saved Messages.
 
+[![Stars](https://img.shields.io/github/stars/ignitezahid/AniListSync?style=flat-square&logo=github)](https://github.com/ignitezahid/AniListSync/stargazers)
+[![License](https://img.shields.io/github/license/ignitezahid/AniListSync?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
+[![Release](https://img.shields.io/github/v/release/ignitezahid/AniListSync?style=flat-square&logo=git)](https://github.com/ignitezahid/AniListSync/releases)
+
 Command-line anime library manager — scans Telegram, matches titles, syncs **AniList** and **MyAnimeList**.
 
 ---
@@ -31,7 +36,7 @@ copy config.example.py config.py   # Windows
 cp config.example.py config.py     # Linux/macOS
 ```
 
-Edit **config.py** with your API credentials and run `python main.py`.
+Edit **config.py** with your API credentials, or just run `python main.py` — the first-run wizard will detect placeholders and guide you through setup interactively.
 
 ## 🔑 API Keys
 
