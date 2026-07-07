@@ -84,7 +84,10 @@ class Plugin:
         self._stop_retry_timer()
         if self._rpc and self._connected:
             try:
-                self._rpc.close()
+                import threading
+                t = threading.Thread(target=self._rpc.close, daemon=True)
+                t.start()
+                t.join(timeout=3)
             except Exception:
                 pass
             self._connected = False
@@ -324,7 +327,10 @@ class Plugin:
     def _reconnect_rpc(self):
         self._disconnect()
         self._connect()
-        print("  Reconnected to Discord RPC.")
+        if self._connected:
+            print("  Reconnected to Discord RPC.")
+        else:
+            print("  Failed to reconnect — is Discord running?")
 
     def _set_client_id(self):
         current = self.settings.get("client_id", CLIENT_ID_DEFAULT)
@@ -375,4 +381,7 @@ class Plugin:
         self.settings["discord_state"] = ""
         self.settings["discord_details"] = ""
         self.save_settings()
-        print("  Custom text cleared — auto-generated text will show.")
+        if self._connected:
+            state, _ = self._resolve("Idle", "AniListSync")
+            self._update(state, "AniListSync", "AniListSync")
+        print("  Custom text cleared.")

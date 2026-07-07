@@ -204,7 +204,7 @@ def plugin_menu():
             opts.append(("0", "Back"))
 
             for key, label in opts:
-                console.print(f"  {key}. {label}")
+                console.print(f" {key:>2}.   {label}")
             console.print()
             action = ask("Choice:")
 

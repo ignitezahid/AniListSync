@@ -132,7 +132,6 @@ See [`docs/plugins.md`](docs/plugins.md) for the plugin API.
 
 ### 🔜 v3.0
 - Cloud Backup providers (S3, Google Drive)
-- Multi-Profile Support
 - Desktop GUI
 
 ---

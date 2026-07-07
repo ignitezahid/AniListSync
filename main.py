@@ -74,79 +74,91 @@ if get_setting("sync_on_startup"):
 
 while True:
 
-    plugin_manager.call_hook("on_idle")
-
     try:
-        choice = show_main_menu()
-    except (EOFError, KeyboardInterrupt):
-        choice = EXIT
 
-    if choice == SYNC:
-        run_sync()
+        plugin_manager.call_hook("on_idle")
 
-    elif choice == AUTOMATION:
-        plugin_manager.call_hook("on_automation")
-        automation_menu()
+        try:
+            choice = show_main_menu()
+        except EOFError:
+            choice = EXIT
 
-    elif choice == MANUAL_SEARCH:
-        plugin_manager.call_hook("on_manual_search")
-        manual_search()
+        if not choice:
+            choice = EXIT
 
-    elif choice == LIBRARY_SEARCH:
-        plugin_manager.call_hook("on_library_search")
-        library_search()
+        if choice == SYNC:
+            run_sync()
 
-    elif choice == COLLECTIONS:
-        plugin_manager.call_hook("on_collections")
+        elif choice == AUTOMATION:
+            plugin_manager.call_hook("on_automation")
+            automation_menu()
 
-        from modes.collection_manager import collection_manager
+        elif choice == MANUAL_SEARCH:
+            plugin_manager.call_hook("on_manual_search")
+            manual_search()
 
-        collection_manager()
+        elif choice == LIBRARY_SEARCH:
+            plugin_manager.call_hook("on_library_search")
+            library_search()
 
-    elif choice == STATISTICS:
-        plugin_manager.call_hook("on_statistics")
+        elif choice == COLLECTIONS:
+            plugin_manager.call_hook("on_collections")
 
-        from modes.statistics import statistics
+            from modes.collection_manager import collection_manager
 
-        statistics()
+            collection_manager()
 
-    elif choice == COMPARE:
-        plugin_manager.call_hook("on_compare")
-        if not _client_started:
-            _client_started = _ensure_client()
-        if _client_started:
-            client.loop.run_until_complete(compare())
+        elif choice == STATISTICS:
+            plugin_manager.call_hook("on_statistics")
 
-    elif choice == REPAIR:
-        plugin_manager.call_hook("on_repair")
-        repair()
+            from modes.statistics import statistics
 
-    elif choice == BULK_OPS:
-        plugin_manager.call_hook("on_bulk_operations")
+            statistics()
 
-        from modes.bulk_operations import bulk_operations
+        elif choice == COMPARE:
+            plugin_manager.call_hook("on_compare")
+            if not _client_started:
+                _client_started = _ensure_client()
+            if _client_started:
+                client.loop.run_until_complete(compare())
 
-        bulk_operations()
+        elif choice == REPAIR:
+            plugin_manager.call_hook("on_repair")
+            repair()
 
-    elif choice == PLUGINS:
-        plugin_manager.call_hook("on_plugin_menu")
-        plugin_menu()
+        elif choice == BULK_OPS:
+            plugin_manager.call_hook("on_bulk_operations")
 
-    elif choice == ABOUT:
-        about()
+            from modes.bulk_operations import bulk_operations
 
-    elif choice == TOOLS:
-        plugin_manager.call_hook("on_tools")
+            bulk_operations()
 
-        from modes.tools import data_center
+        elif choice == PLUGINS:
+            plugin_manager.call_hook("on_plugin_menu")
+            plugin_menu()
 
-        if not _client_started:
-            _client_started = _ensure_client()
-        if _client_started:
-            client.loop.run_until_complete(data_center())
+        elif choice == ABOUT:
+            about()
 
-    elif choice == EXIT:
+        elif choice == TOOLS:
+            plugin_manager.call_hook("on_tools")
 
+            from modes.tools import data_center
+
+            if not _client_started:
+                _client_started = _ensure_client()
+            if _client_started:
+                client.loop.run_until_complete(data_center())
+
+        elif choice == EXIT:
+            raise KeyboardInterrupt
+
+        else:
+            warning("Invalid choice.")
+
+    except KeyboardInterrupt:
+
+        print()
         success("Goodbye!")
         plugin_manager.call_hook("on_shutdown")
         try:
@@ -156,7 +168,3 @@ while True:
             pass
         sys.stdout.flush()
         os._exit(0)
-
-    else:
-
-        warning("Invalid choice.")

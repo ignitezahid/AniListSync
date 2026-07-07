@@ -110,8 +110,10 @@ def ask(prompt: str = "Choice:"):
 
     try:
         return console.input(f"[menu]{prompt}[/] ").strip()
-    except (EOFError, KeyboardInterrupt):
+    except EOFError:
         return ""
+    except KeyboardInterrupt:
+        raise
 
 
 
