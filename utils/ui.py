@@ -96,16 +96,22 @@ def pause():
 
     warning("Press ESC to return.")
     while True:
-        if msvcrt.kbhit():
-            key = msvcrt.getch()
-            if key == b"\x1b":
-                break
+        try:
+            if msvcrt.kbhit():
+                key = msvcrt.getch()
+                if key == b"\x1b":
+                    break
+        except (EOFError, KeyboardInterrupt):
+            break
 
 
 def ask(prompt: str = "Choice:"):
     """Prompt the user for input."""
 
-    return console.input(f"[menu]{prompt}[/] ").strip()
+    try:
+        return console.input(f"[menu]{prompt}[/] ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return ""
 
 
 

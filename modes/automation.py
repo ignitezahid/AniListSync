@@ -79,6 +79,8 @@ def automation_menu():
 
         elif choice == AUTO_BACK:
             break
+        else:
+            warning("Invalid choice.")
 
 
 def run_auto_backup():

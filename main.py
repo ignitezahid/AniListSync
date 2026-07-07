@@ -12,7 +12,7 @@ import warnings  # noqa: E402
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ProactorBasePipeTransport.*")
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed transport.*")
 
-from telegram_client import client  # noqa: E402
+from telegram_client import client, init_accounts, ensure_connected, disconnect_client  # noqa: E402
 from sync import main as sync_main  # noqa: E402
 from menu import show_dashboard, show_main_menu  # noqa: E402
 from utils.ui import success, warning, console  # noqa: E402
@@ -30,9 +30,22 @@ from utils.menu_keys import *  # noqa: E402,F405
 
 plugin_manager.discover()
 reload_theme()
+init_accounts()
 plugin_manager.call_hook("on_startup")
 
 _client_started = False
+
+
+def _ensure_client() -> bool:
+    """Start or reconnect the primary Telegram client."""
+    try:
+        if client.is_connected():
+            return True
+        client.start()
+        return True
+    except Exception as e:
+        warning(f"Telegram connection failed: {e}")
+        return False
 
 
 def run_sync():
@@ -40,8 +53,10 @@ def run_sync():
     try:
         run_auto_backup()
         if not _client_started:
-            client.start()
-            _client_started = True
+            _client_started = _ensure_client()
+        if not _client_started:
+            warning("Cannot sync — Telegram not connected.")
+            return
         client.loop.run_until_complete(sync_main())
         run_auto_health()
     except Exception:
@@ -61,7 +76,10 @@ while True:
 
     plugin_manager.call_hook("on_idle")
 
-    choice = show_main_menu()
+    try:
+        choice = show_main_menu()
+    except (EOFError, KeyboardInterrupt):
+        choice = EXIT
 
     if choice == SYNC:
         run_sync()
@@ -95,9 +113,9 @@ while True:
     elif choice == COMPARE:
         plugin_manager.call_hook("on_compare")
         if not _client_started:
-            client.start()
-            _client_started = True
-        client.loop.run_until_complete(compare())
+            _client_started = _ensure_client()
+        if _client_started:
+            client.loop.run_until_complete(compare())
 
     elif choice == REPAIR:
         plugin_manager.call_hook("on_repair")
@@ -123,14 +141,19 @@ while True:
         from modes.tools import data_center
 
         if not _client_started:
-            client.start()
-            _client_started = True
-        client.loop.run_until_complete(data_center())
+            _client_started = _ensure_client()
+        if _client_started:
+            client.loop.run_until_complete(data_center())
 
     elif choice == EXIT:
 
         success("Goodbye!")
         plugin_manager.call_hook("on_shutdown")
+        try:
+            if _client_started:
+                client.loop.run_until_complete(disconnect_client())
+        except Exception:
+            pass
         sys.stdout.flush()
         os._exit(0)
 

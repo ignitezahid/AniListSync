@@ -36,10 +36,14 @@ def _connection_status(test_fn):
 
 
 def _telegram_status():
-    session_file = Path("telegram_session.session")
-    if session_file.exists():
-        return "🟢 Connected"
-    return "🔴 Disconnected"
+    from telegram_client import get_chat_sources
+    # Check if any .session file exists (primary or additional accounts)
+    sessions = list(Path(".").glob("*.session"))
+    if not sessions:
+        return "🔴 Disconnected"
+    sources = get_chat_sources()
+    src = f" ({len(sources)} src)" if len(sources) > 1 else ""
+    return f"🟢 Connected{src}"
 
 
 def _load_state():

@@ -27,6 +27,9 @@ DEFAULT_SETTINGS = {
     "interactive_search": True,
     "confirm_before_sync": False,
 
+    # Telegram
+    "telegram_sources": ["me"],
+
     # Automation
     "automation_enabled": False,
     "automation_interval_minutes": 30,

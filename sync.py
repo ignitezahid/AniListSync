@@ -15,7 +15,7 @@ from rich.table import Column
 
 from core.plugin_loader import plugin_manager
 
-from telegram_client import client
+from telegram_client import client, get_chat_sources, iter_all_sources
 from utils import logger
 from utils.backup import backup_file
 from utils.menu_keys import *  # noqa: F405
@@ -40,15 +40,20 @@ from mal import (
     add_to_list as add_to_mal,
 )
 
-def load_resume() -> int:
+def load_resume(chat: str = "me") -> int:
     if os.environ.get("RESET_RESUME", "0") == "1":
         return 0
     data = load_json(RESUME_FILE, {})
-    return data.get("last_message_id", 0)
+    ids = data.get("last_message_ids") or {}
+    return ids.get(chat, data.get("last_message_id", 0))
 
 
-def save_resume(message_id: int) -> None:
-    save_json(RESUME_FILE, {"last_message_id": message_id})
+def save_resume(message_id: int, chat: str = "me") -> None:
+    data = load_json(RESUME_FILE, {})
+    ids = data.get("last_message_ids") or {}
+    ids[chat] = message_id
+    data["last_message_ids"] = ids
+    save_json(RESUME_FILE, data)
 
 
 def load_retry_queue() -> set[str]:
@@ -66,6 +71,7 @@ _id_lock = threading.Lock()
 
 processed_titles: set[str] = set()
 TITLE_QUEUE: Queue = Queue()
+_importing: bool = False
 
 
 def anime_title(anime: dict) -> str:
@@ -238,7 +244,13 @@ def choose_franchise(result: dict) -> list[dict]:
 def interactive_search(title: str):
     """Search AniList and let the user choose the result."""
 
+    attempts = 0
     while True:
+        attempts += 1
+        if attempts > 20:
+            warning("Too many attempts. Cancelling.")
+            return None
+
         result = search_anime(title)
 
         if not result:
@@ -474,14 +486,19 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
     seen = set(all_titles)
     title_to_msg_id = {}
 
-    async for message in client.iter_messages("me", min_id=last_message_id, reverse=True):
-        if not getattr(message, "text", None):
-            continue
-        title = message.text.strip()
-        if title and title not in seen:
-            all_titles.append(title)
-            seen.add(title)
-            title_to_msg_id[title] = message.id
+    for c, chat in iter_all_sources():
+        chat_last_id = load_resume(chat)
+        try:
+            async for message in c.iter_messages(chat, min_id=chat_last_id, reverse=True):
+                if not getattr(message, "text", None):
+                    continue
+                title = message.text.strip()
+                if title and title not in seen:
+                    all_titles.append(title)
+                    seen.add(title)
+                    title_to_msg_id[title] = (chat, message.id)
+        except Exception as e:
+            print(f"  [yellow]Skipping chat '{chat}': {e}[/]")
 
     if not all_titles:
         print("No new titles to process.")
@@ -503,32 +520,61 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
                 await process_title(title)
                 progress.start()
 
-            msg_id = title_to_msg_id.get(title)
-            if msg_id:
-                save_resume(msg_id)
+            info = title_to_msg_id.get(title)
+            if info:
+                chat, msg_id = info
+                save_resume(msg_id, chat)
 
             progress.advance(task)
 
 
-@client.on(events.NewMessage(chats="me"))
-async def new_saved_message(event):
-    if not event.raw_text:
+_watchers_registered = False
+
+
+def _register_watchers():
+    global _watchers_registered
+    if _watchers_registered:
+        return
+    _watchers_registered = True
+    from telegram_client import get_all_clients
+
+    for c, sources in get_all_clients():
+        for src in sources:
+            _register_single_watcher(c, src)
+
+
+def _register_single_watcher(c, src):
+    source_key = src  # capture the configured source string (e.g. "me", "@channel")
+
+    @c.on(events.NewMessage(chats=src))
+    async def new_source_message(event):
+        await _handle_new_message(event, source_key)
+
+    return new_source_message
+
+
+async def _handle_new_message(event, source_key: str):
+    global _importing
+    if _importing or not event.raw_text:
         return
 
     title = event.raw_text.strip()
     if not title:
         return
 
+    if event.id <= load_resume(source_key):
+        return
+
     print(f"\nNew anime detected: {title}")
-    print(f"Found Message ID: {event.id}")
+    print(f"From: {source_key} (ID: {event.id})")
     await asyncio.sleep(1)
 
     await TITLE_QUEUE.put(title)
-    save_resume(event.id)
+    save_resume(event.id, source_key)
 
 
 async def main() -> None:
-    global completed_ids, mal_completed_ids, processed_titles
+    global completed_ids, mal_completed_ids, processed_titles, _importing
 
     sync_start = time_module.time()
 
@@ -568,10 +614,14 @@ async def main() -> None:
     print("Loading MyAnimeList...")
     print(f"Loaded {len(mal_ids)} anime from MyAnimeList.")
 
+    global _importing
+
     processed_titles = set()
     last_message_id = load_resume()
 
+    _importing = True
     await import_old_messages(stats, last_message_id)
+    _importing = False
 
     show_key_value_table(
         "Import Finished",
@@ -623,6 +673,8 @@ async def main() -> None:
         pass
 
     plugin_manager.call_hook("on_sync_finish")
+
+    _register_watchers()
 
     console.print()
     watcher_ready()

@@ -519,3 +519,5 @@ def collection_manager():
 
         elif choice == COL_DELETE:
             _delete_collection(collections)
+        else:
+            warning("Invalid choice.")

@@ -421,30 +421,24 @@ def library_health():
                 action = issue_types[idx]
                 if action == "aliases":
                     detect_duplicates()
-                    library_health()
-                    return
+                    continue
                 elif action == "repair":
                     run_repair()
-                    library_health()
-                    return
+                    continue
                 elif action == "retry":
                     retry_queue_menu()
-                    library_health()
-                    return
+                    continue
                 elif action == "cache":
                     from modes.search_cache import search_cache_menu
                     search_cache_menu()
-                    library_health()
-                    return
+                    continue
                 elif action == "backup":
                     _clean_old_backups()
-                    library_health()
-                    return
+                    continue
                 elif action == "resume":
                     save_json(RESUME_FILE, {"last_message_id": 0})
                     success("Resume file reset to last_message_id: 0.")
-                    library_health()
-                    return
+                    continue
                 elif action == "export":
                     warning("No automated fix — review exports/ folder manually.")
                 elif action == "config":
@@ -457,8 +451,7 @@ def library_health():
                             fixed[k] = v
                     save_json(SETTINGS_FILE, fixed)
                     success("Configuration repaired.")
-                    library_health()
-                    return
+                    continue
                 elif action == "creds":
                     warning("No automated fix — check config.py and mal_tokens.json manually.")
                 elif action == "telegram":

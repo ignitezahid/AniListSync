@@ -98,6 +98,7 @@ def repair():
             auto_repair(report)
             continue
         else:
+            warning("Invalid choice.")
             continue
 
         index = 0

@@ -106,6 +106,8 @@ def settings_home():
             settings_editor("advanced")
         elif choice == SETTINGS_BACK:
             return
+        else:
+            warning("Invalid choice.")
 
 
 def settings_editor(mode):

@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.9.0 (2026-07-07)
+
+### Added
+- 📡 **Telegram multi-chat sources** — sync from multiple chats/channels (not just Saved Messages). Configure via `settings.json` → `telegram_sources`
+- 👥 **Telegram multi-account** — additional Telegram accounts via `config.py` → `TELEGRAM_ACCOUNTS` list
+- 🔁 **Telegram reconnection** — `ensure_connected()` checks before every sync; explicit `disconnect_client()` on shutdown
+- 🎮 **Discord RPC v1.6.0** — custom state/details text override (5 new commands), current anime title shown during sync, cross-platform Discord detection (Windows/Linux/macOS)
+- 🔔 **Notifications v2.0.0** — unified notification bus: desktop + Discord webhook + Telegram push. New toggles for anime-added push, webhook URL, Telegram chat config
+- 📝 **Per-chat resume tracking** — each chat source tracks its own `last_message_id` in `resume.json`
+- 🧹 **Plugin commands** — "Set Custom State", "Set Custom Details", "Clear Custom Text" (Discord RPC); "Set Webhook URL", "Set Telegram Chat", "Test Notification" (Notifications)
+
+### Changed
+- 🔄 **`sync.py` watcher** — registered dynamically for all clients/sources instead of static `@client.on` decorator
+- 📋 **Dashboard Telegram status** — shows source count and live connection check
+- 📄 **`config.example.py`** — added `TELEGRAM_ACCOUNTS` documentation
+
 ## v2.8.0 (2026-07-07)
 
 ### Added

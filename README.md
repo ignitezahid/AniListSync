@@ -124,10 +124,16 @@ See [`docs/plugins.md`](docs/plugins.md) for the plugin API.
 - Crash fixes: guarded int()/input(), subprocess timeout, json.load guards
 - Windows ResourceWarning suppression, BACK_10 constant fix
 
-### 🔜 v2.9+
+### ✅ v2.9 — Integrations Overhaul
+- Telegram: multi-chat sources, multi-account, reconnection lifecycle
+- Discord RPC v1.6.0: custom status text, anime title in presence, cross-platform
+- Unified notification bus: desktop + webhook + Telegram push
+- Auto-push on anime added, sync finish, backup, health scan
+
+### 🔜 v3.0
 - Cloud Backup providers (S3, Google Drive)
-- Discord & Telegram integrations, Web Dashboard
-- Multi-Profile support, Desktop GUI
+- Multi-Profile Support
+- Desktop GUI
 
 ---
 
