@@ -89,6 +89,35 @@ See [`docs/plugins.md`](docs/plugins.md) for the plugin API.
 
 ## 🗺️ Roadmap
 
+### ✅ v2.3
+- Rich terminal interface, Retry Queue Manager, Manual Search
+- Live MyAnimeList sync, Interactive Search
+- Export formats, startup dashboard, live progress bar
+
+### ✅ v2.4
+- Dashboard 2.0, Library Search with filters & history
+- Better Statistics (cache hits, studio/genre/year analysis)
+- HTML/XLSX export, Duplicate Alias Detection, Auto Repair
+
+### ✅ v2.5
+- Collection Manager, Bulk Operations
+- Watch order in franchise view, fuzzy-matching fallback
+- Average score in GraphQL, ruff cleanup
+
+### ✅ v2.6
+- Automation & Scheduled Sync, Statistics 3.0, Dashboard 3.0
+- Retry queue dedup, Library Health refactor
+- Auto Backup/Health, Collection Manager cache
+
+### ✅ v2.7 — Plugin System & Integrations
+- Plugin framework (discovery, deps, permissions, hooks, commands)
+- 7 themes, Discord RPC, Notifications, Cloud Backup
+- About page, Plugin Manager, plugin API docs
+- Statistics: Genre Analytics, exportable reports
+- Library Search: ESC exit, recent searches
+- Sync: resume every title, Telegram order, no "Adding:" bar
+- Dashboard: cached state.json counts, os._exit(0)
+
 ### ✅ v2.8 — Robustness & Stability
 - Discord RPC v1.5.0 auto-reconnect (process detection, 5s polling, background timer)
 - tools.py split into package, menu constants, first-run config wizard
