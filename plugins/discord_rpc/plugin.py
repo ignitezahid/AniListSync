@@ -1,4 +1,7 @@
+import asyncio
 import json
+import os
+import subprocess
 import threading
 import time
 import warnings
@@ -13,11 +16,13 @@ STATE_FILE = Path("state.json")
 try:
     from pypresence import Presence
     from pypresence.exceptions import DiscordNotFound
+    from pypresence.payloads import Payload
     HAS_PYPRESENCE = True
 except ImportError:
     HAS_PYPRESENCE = False
     Presence = None
     DiscordNotFound = Exception
+    Payload = None
 
 CLIENT_ID_DEFAULT = "1523636189037334630"
 
@@ -30,10 +35,12 @@ class Plugin:
         self._sync_count = 0
         self._health_pct = 0
         self._keepalive: threading.Timer | None = None
+        self._retry_timer: threading.Timer | None = None
         self._last_state = ""
         self._last_details = ""
         self._last_large_text = "AniListSync"
         self._start_time: int | None = None
+        self._retry_ts: float = 0
 
     def _connect(self):
         if not HAS_PYPRESENCE:
@@ -41,20 +48,28 @@ class Plugin:
             return
         if self._connected:
             return
+        self._disconnect()
         cid = self.settings.get("client_id", CLIENT_ID_DEFAULT)
         try:
             self._rpc = Presence(cid, response_timeout=2, connection_timeout=2)
             self._rpc.connect()
             self._connected = True
             self._start_keepalive()
+            self._stop_retry_timer()
+            self._update("Idle", "AniListSync", "AniListSync")
             self.log("Connected to Discord RPC")
         except DiscordNotFound:
             self.log("Discord not running — launch Discord first", "WARN")
+            self._rpc = None
+            self._start_retry_timer()
         except Exception as e:
             self.log(f"Failed to connect: {e}", "ERROR")
+            self._rpc = None
+            self._start_retry_timer()
 
     def _disconnect(self):
         self._stop_keepalive()
+        self._stop_retry_timer()
         if self._rpc and self._connected:
             try:
                 self._rpc.close()
@@ -66,7 +81,11 @@ class Plugin:
 
     def _update(self, state: str, details: str = None, large_text: str = "AniListSync"):
         if not self._connected or not self._rpc:
-            return
+            if HAS_PYPRESENCE and time.time() - self._retry_ts > 10:
+                self._retry_ts = time.time()
+                self._connect()
+            if not self._connected or not self._rpc:
+                return
         if self._start_time is None:
             self._start_time = int(time.time())
         self._state = state
@@ -87,9 +106,6 @@ class Plugin:
             self.log(f"Update error: {e}", "WARN")
 
     def _send_async(self, **kwargs):
-        import asyncio
-        import os
-        from pypresence.payloads import Payload
         payload_data = Payload.set_activity(pid=os.getpid(), activity=True, **kwargs)
         async def _do():
             try:
@@ -133,6 +149,36 @@ class Plugin:
             self._keepalive.cancel()
             self._keepalive = None
 
+    def _start_retry_timer(self):
+        self._stop_retry_timer()
+        self._retry_timer = threading.Timer(5, self._retry_connect)
+        self._retry_timer.daemon = True
+        self._retry_timer.start()
+
+    def _stop_retry_timer(self):
+        if self._retry_timer:
+            self._retry_timer.cancel()
+            self._retry_timer = None
+
+    def _discord_running(self) -> bool:
+        try:
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq Discord.exe", "/NH"],
+                capture_output=True, text=True, timeout=3,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            return "Discord.exe" in result.stdout
+        except Exception:
+            return False
+
+    def _retry_connect(self):
+        if self._connected or not HAS_PYPRESENCE:
+            return
+        if self._discord_running():
+            self._connect()
+        if not self._connected:
+            self._start_retry_timer()
+
     def _library_count(self) -> str:
         try:
             with open(STATE_FILE, encoding="utf-8") as f:
@@ -154,7 +200,8 @@ class Plugin:
         self._disconnect()
 
     def on_idle(self):
-        self._update("Idle", "AniListSync", "AniListSync")
+        if self._connected:
+            self._update("Idle", "AniListSync", "AniListSync")
 
     def on_sync_start(self):
         self._sync_count = 0
@@ -175,11 +222,32 @@ class Plugin:
     def on_automation(self):
         self._update("Running Automation", "Scheduled tasks", "AniListSync")
 
+    def on_manual_search(self):
+        self._update("Manual Search", "Searching titles", "AniListSync")
+
+    def on_library_search(self):
+        self._update("Library Search", "Browsing library", "AniListSync")
+
     def on_statistics(self):
         self._update("Viewing Statistics", "Library analytics", "AniListSync")
 
     def on_collections(self):
         self._update("Managing Collections", "Organizing library", "AniListSync")
+
+    def on_compare(self):
+        self._update("Comparing", "Library vs Telegram", "AniListSync")
+
+    def on_repair(self):
+        self._update("Running Repair", "Fixing library issues", "AniListSync")
+
+    def on_bulk_operations(self):
+        self._update("Bulk Operations", "Batch library actions", "AniListSync")
+
+    def on_plugin_menu(self):
+        self._update("Plugin Manager", "Managing plugins", "AniListSync")
+
+    def on_tools(self):
+        self._update("Tools", "Utility functions", "AniListSync")
 
     def on_health_scan(self):
         count = self._library_count()
