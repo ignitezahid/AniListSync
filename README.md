@@ -46,14 +46,25 @@ Edit **config.py** with your API credentials and run `python main.py`.
 ## 📋 Main Menu
 
 ```text
- 1. 🔄  Sync          7.  🔍  Compare
- 2. 🤖  Automation    8.  🛠   Repair
- 3. 🔎  Search        9.  🚀  Bulk Operations
- 4. 📚  Library Search
- 5. 🗂   Collections  10. 🧩  Plugins
-                      11. 📋  About
- 6. 📊  Statistics    12. 🧰  Tools
-                      13. 🚪  Exit
+  1. 🔄  Sync
+  2. 🤖  Automation
+
+  3. 🔎  Search
+  4. 📚  Library Search
+  5. 🗂   Collections
+
+  6. 📊  Statistics
+
+  7. 🔍  Compare
+  8. 🛠   Repair
+  9. 🚀  Bulk Operations
+
+ 10. 🧩  Plugins
+
+ 11. 📋  About
+
+ 12. 🧰  Tools
+ 13. 🚪  Exit
 ```
 
 ---
