@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.8.0 (2026-07-07)
+
+### Added
+- 🎮 **Discord RPC v1.5.0** — automatic reconnection via `tasklist` process detection (5s polling), immediate presence push after connect, background retry timer independent of main menu loop
+- 🗂️ **`modes/tools.py` split into package** — `modes/tools/` with `__init__.py` (backward-compatible re-exports) and submodules: `common.py`, `export_tools.py`, `import_tools.py`, `backup.py`, `settings.py`, `health.py`, `router.py`
+- 🔑 **Menu choice constants** — `utils/menu_keys.py` with ~100+ named constants for every menu, used across 14 files via star imports (no more magic strings)
+- 🧭 **First-run config wizard** — `utils/startup.py` detects placeholder values (`your_*`, `0`, empty), copies `config.example.py` → `config.py`, interactively prompts for real credentials
+- 📦 **Consistent top-level imports** — all safe inline imports moved to top of files; circular/conditional/optional imports kept inline
+
+### Fixed
+- 🛡️ **Crash guards**: guarded `int()` on user input (alias manager, repair), guarded `input()` with `EOFError`/`KeyboardInterrupt` (plugin loader), added `timeout=5` to notification subprocess (prevent hangs), guarded `json.load` on `state.json` (tools router)
+- 🧹 **Windows cleanup**: suppressed harmless `ResourceWarning` from asyncio proactor pipe garbage collection (Telethon)
+- 🐛 **Missing menu constant**: replaced `BACK_10` with existing `BACK` in tools router and bulk operations
+
+### Changed
+- 🔁 **Discord RPC late-connect retry** — retries via both `on_idle` and `_update()` for fast reconnect after late Discord launch; redundant inline retry removed from `on_idle` in favor of background timer
+- 🎮 **Discord RPC manifest** — version bumped to 1.5.0
+
 ## v2.7.0 (2026-07-06)
 
 ### Added

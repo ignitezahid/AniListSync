@@ -26,7 +26,7 @@ AniListSync is a command-line anime library manager that scans your Telegram Sav
 - ⚙️ Built-in Settings Manager
 - 📋 Startup Dashboard with card panels, relative time, countdown, health score
 - 🧩 Plugin system with Discord RPC, Notifications, Cloud Backup, custom themes
-- 🎮 Discord Rich Presence (sync, automation, statistics, collections, health states)
+- 🎮 Discord Rich Presence v1.5.0 (auto-reconnect via process detection, all menu states)
 - 🔔 Desktop notifications (sync, backup, health scan)
 - ☁️ Cloud Backup (GitHub Releases with auto-cleanup)
 - 🎨 7 built-in themes (Dracula, Catppuccin, Nord, Tokyo Night, Solarized Light, Matrix, Gruvbox)
@@ -100,7 +100,7 @@ On startup, a dashboard shows connection status, library stats, storage, and syn
 ```text
 ╭────────────────────────────────────────────╮
 │               🎌 AniListSync               │
-│        Anime Library Manager v2.7.0        │
+│        Anime Library Manager v2.8.0        │
 │               by ignitezahid               │
 ╰────────────────────────────────────────────╯
 
@@ -190,7 +190,7 @@ Attack on Titan
 AniListSync 2.7.0+ supports a plugin system. Each plugin lives in its own folder under `plugins/` and consists of a `manifest.json` and an entry script.
 
 **Built-in plugins:**
-- 🎮 **Discord RPC** — Rich Presence with states for sync, automation, statistics, etc.
+- 🎮 **Discord RPC v1.5.0** — Rich Presence with states for sync, automation, statistics, etc. Automatic reconnection via background process detection (5s polling), immediate presence push, resilient retry timer.
 - 🔔 **Notifications** — Windows toast notifications on sync/backup/health
 - ☁️ **Cloud Backup** — zip compression + upload to GitHub Releases (extensible provider system)
 - 🎨 **Themes** — 7 built-in themes (Dracula, Catppuccin, Nord, Tokyo Night, Solarized Light, Matrix, Gruvbox) with live switching
@@ -249,7 +249,7 @@ See [`docs/plugins.md`](docs/plugins.md) for the full plugin API documentation.
 
 - [x] 🧩 Plugin System (discovery, dependency sorting, permissions, hooks, commands, per-plugin logs/settings)
 - [x] 🎨 7 Themes as Plugins (Dracula, Catppuccin, Nord, Tokyo Night, Solarized Light, Matrix, Gruvbox)
-- [x] 🎮 Discord Rich Presence Plugin (sync, automation, statistics, collections, health states)
+- [x] 🎮 Discord Rich Presence Plugin v1.5.0 (auto-reconnect via process detection, immediate presence push, background retry timer)
 - [x] 🔔 Notifications Plugin (sync finish, backup, health scan, per-type toggles)
 - [x] ☁️ Cloud Backup Plugin (zip compression, GitHub Releases provider, keep-last cleanup)
 - [x] 📋 About Page (version, Python, platform, plugins/themes, diagnostics)
@@ -262,10 +262,17 @@ See [`docs/plugins.md`](docs/plugins.md) for the full plugin API documentation.
 - [x] 🚪 Exit: safe shutdown via `os._exit(0)` — no hanging or GC warnings
 - [x] 🔔 Library Health notification: saves `health_pct` to state.json (fixes 0% bug)
 
-### v2.8 — Cloud & Quality-of-Life
-- [ ] 📦 Plugin Marketplace
-- [ ] ☁️ Cloud Backup providers (S3, Google Drive)
-- [ ] 📊 Better Export & Reporting
+### ✅ v2.8 — Robustness & Stability
+
+- [x] 🎮 **Discord RPC v1.5.0** — automatic reconnection via `tasklist` process detection (5s polling), immediate presence push after connect, background retry timer independent of main menu loop
+- [x] 🗂️ **`modes/tools.py` split into package** — `modes/tools/__init__.py` with backward-compatible re-exports, submodules: `common.py`, `export_tools.py`, `import_tools.py`, `backup.py`, `settings.py`, `health.py`, `router.py`
+- [x] 🔑 **Menu choice constants** — `utils/menu_keys.py` with ~100+ named constants, used across 14 files via star imports
+- [x] 🧭 **First-run config wizard** — `utils/startup.py` detects placeholder values (`your_*`, `0`, empty), copies `config.example.py` → `config.py`, interactively prompts for real credentials
+- [x] 📦 **Consistent imports** — all safe inline imports moved to top of files across the entire codebase; circular/conditional/optional imports kept inline
+- [x] 🛡️ **Crash fixes**: guarded `int()` on user input (alias manager, repair), guarded `input()` with `EOFError`/`KeyboardInterrupt` in plugin loader, added `timeout=5` to notification subprocess to prevent hangs, guarded `json.load` on `state.json` in tools router
+- [x] 🧹 **Windows clean-up**: suppressed harmless `ResourceWarning` from asyncio proactor pipe garbage collection (Telethon)
+- [x] 🐛 **Menu constant fix**: replaced missing `BACK_10` with existing `BACK` constant in tools router and bulk operations
+- [x] 🔁 **Discord RPC late-connect retry**: retries via both `on_idle` (30s) and `_update()` (10s) for fast reconnect after late Discord launch
 
 ### v2.9
 - [ ] Cloud Backup providers (S3, Google Drive)
