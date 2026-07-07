@@ -9,6 +9,7 @@ from utils.ui import (
     success,
     warning,
 )
+from utils.menu_keys import *  # noqa: F405
 
 
 def retry_queue_menu():
@@ -23,16 +24,16 @@ def retry_queue_menu():
             ],
         )
 
-        if choice == "1":
+        if choice == RETRY_VIEW:
             view_retry_queue()
 
-        elif choice == "2":
+        elif choice == RETRY_REMOVE:
             remove_retry_titles()
 
-        elif choice == "3":
+        elif choice == RETRY_CLEAR:
             clear_retry_queue()
 
-        elif choice == "4":
+        elif choice == RETRY_BACK:
             return
 
         else:

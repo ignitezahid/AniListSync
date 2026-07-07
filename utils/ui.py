@@ -1,4 +1,5 @@
 import msvcrt
+import sys as _sys
 from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
@@ -196,7 +197,6 @@ def reload_theme():
 
 def _set_terminal_bg(pm):
     """Set terminal background via OSC escape if a theme plugin defines bg_color."""
-    import sys as _sys
     bg = None
     for pid in list(pm._plugins.keys()):
         if not pm.is_enabled(pid):

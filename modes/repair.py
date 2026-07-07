@@ -8,6 +8,7 @@ from anilist import (
 from mal import add_to_list as add_to_mal
 from utils.file_utils import load_json, save_json
 from utils.ui import ask, console, error, pause, success, warning, show_header, show_menu
+from utils.menu_keys import *  # noqa: F405
 
 
 REPAIR_FILE = "missing_anilist.json"
@@ -86,14 +87,14 @@ def repair():
             ],
         )
 
-        if choice == "4" or not choice:
+        if choice == REPAIR_BACK or not choice:
             return
 
-        if choice == "1":
+        if choice == REPAIR_ANILIST:
             repair_list = report.get("missing", [])
-        elif choice == "2":
+        elif choice == REPAIR_NOT_FOUND:
             repair_list = report.get("not_found", [])
-        elif choice == "3":
+        elif choice == REPAIR_AUTO:
             auto_repair(report)
             continue
         else:
@@ -134,7 +135,15 @@ def repair():
                 use_one = ask("Use one? (1-5, Enter = No):")
 
                 if use_one:
-                    alias = aliases[int(use_one) - 1]["data"]
+                    try:
+                        idx = int(use_one) - 1
+                    except ValueError:
+                        warning("Invalid number.")
+                        continue
+                    if idx < 0 or idx >= len(aliases):
+                        warning("Invalid selection.")
+                        continue
+                    alias = aliases[idx]["data"]
 
                     add_to_list(alias["id"])
                     add_to_mal(
@@ -151,14 +160,14 @@ def repair():
 
             choice = ask("[Y]es [N]ext [Q]uit:").lower()
 
-            if choice == "q":
+            if choice == ACTION_QUIT:
                 return
 
-            if choice == "n":
+            if choice == ACTION_NO:
                 index += 1
                 continue
 
-            if choice != "y":
+            if choice != ACTION_YES:
                 save_repair_report(report)
                 continue
 

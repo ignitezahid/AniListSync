@@ -1,6 +1,13 @@
+import json
+
 from utils.ui import warning, success, show_menu
-from anilist import get_completed_anime
+from utils.menu_keys import *  # noqa: F405
+from utils.file_utils import load_json, save_json
+from anilist import get_completed_anime, get_completed_ids
 from mal import get_completed_mal_ids
+from modes.tools import _clean_old_backups, library_health
+from modes.alias_manager import detect_duplicates
+from modes.statistics import statistics
 
 
 def _refresh_anilist_cache():
@@ -16,9 +23,6 @@ def _refresh_mal_cache():
 
 
 def _refresh_all_ids():
-    import json
-    from anilist import get_completed_ids
-
     success("Refreshing all caches from API...")
     anilist_ids = list(get_completed_ids(force_refresh=True))
     mal_ids = list(get_completed_mal_ids(force_refresh=True))
@@ -38,14 +42,10 @@ def _refresh_all_ids():
 
 
 def _run_library_health():
-    from modes.tools import library_health
     library_health()
 
 
 def _repair_missing_mal_ids():
-    from utils.file_utils import load_json, save_json
-    from utils.ui import success, warning
-
     lib = {a["id"]: a for a in get_completed_anime()}
     collections = load_json("collections.json", {})
     fixed = 0
@@ -65,24 +65,18 @@ def _repair_missing_mal_ids():
 
 
 def _remove_duplicate_aliases():
-    from modes.alias_manager import detect_duplicates
     detect_duplicates()
 
 
 def _clean_old_backups_wrapper():
-    from modes.tools import _clean_old_backups
     _clean_old_backups()
 
 
 def _rebuild_statistics():
-    from modes.statistics import statistics
     statistics()
 
 
 def _optimize_database():
-    from utils.file_utils import load_json, save_json
-    from utils.ui import success, warning
-
     lib_ids = {a["id"] for a in get_completed_anime()}
     collections = load_json("collections.json", {})
 
@@ -147,25 +141,25 @@ def bulk_operations():
             ],
         )
 
-        if choice == "1":
+        if choice == BULK_REFRESH_AL:
             _refresh_anilist_cache()
-        elif choice == "2":
+        elif choice == BULK_REFRESH_MAL:
             _refresh_mal_cache()
-        elif choice == "3":
+        elif choice == BULK_REFRESH_ALL:
             _refresh_all_ids()
-        elif choice == "4":
+        elif choice == BULK_HEALTH:
             _run_library_health()
-        elif choice == "5":
+        elif choice == BULK_REPAIR_MAL:
             _repair_missing_mal_ids()
-        elif choice == "6":
+        elif choice == BULK_DEDUP:
             _remove_duplicate_aliases()
-        elif choice == "7":
+        elif choice == BULK_CLEAN:
             _clean_old_backups_wrapper()
-        elif choice == "8":
+        elif choice == BULK_REBUILD:
             _rebuild_statistics()
-        elif choice == "9":
+        elif choice == BULK_OPTIMIZE:
             _optimize_database()
-        elif choice == "10":
+        elif choice == BACK:
             break
         else:
             warning("Invalid choice.")

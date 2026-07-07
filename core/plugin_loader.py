@@ -219,7 +219,10 @@ class PluginManager:
         for p in required:
             print(f"    - {p}")
         print()
-        resp = input("  Grant permissions? (y/N): ").strip().lower()
+        try:
+            resp = input("  Grant permissions? (y/N): ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            resp = "n"
         if resp == "y":
             self._permissions_consent[pid] = required
             return True
@@ -373,6 +376,22 @@ class PluginManager:
         if hasattr(instance, "get_commands") and callable(instance.get_commands):
             count += 1
         return count
+
+    def get_plugin(self, pid: str) -> object | None:
+        """Return the plugin instance by ID, or None if not loaded."""
+        return self._plugins.get(pid)
+
+    def get_manifest(self, pid: str) -> dict | None:
+        """Return the manifest dict for a plugin by ID, or None."""
+        return self._manifests.get(pid)
+
+    def get_errors(self) -> dict[str, PluginError]:
+        """Return all plugin errors keyed by plugin ID."""
+        return dict(self._errors)
+
+    def plugin_count(self) -> int:
+        """Return the total number of loaded plugins."""
+        return len(self._plugins)
 
 
 plugin_manager = PluginManager()

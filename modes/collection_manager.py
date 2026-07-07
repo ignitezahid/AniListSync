@@ -3,6 +3,8 @@ from utils.file_utils import load_json, save_json
 from utils.ui import show_header, console, ask, warning, pause, success, error, show_menu
 from anilist import get_completed_anime
 from core.plugin_loader import plugin_manager
+from modes.tools import export_json, export_csv, export_markdown, export_html
+from utils.menu_keys import *  # noqa: F405
 
 COLLECTIONS_FILE = "collections.json"
 SORT_OPTIONS = ["Alphabetical", "Recently Added", "Score", "Year"]
@@ -436,8 +438,6 @@ def _export_collection(collections: dict):
         ["JSON", "CSV", "Markdown", "HTML", "Cancel"],
     )
 
-    from modes.tools import export_json, export_csv, export_markdown, export_html
-
     exporters = {
         "1": ("json", export_json, rows),
         "2": ("csv", export_csv, (rows, headers)),
@@ -473,10 +473,10 @@ def collection_manager():
         if not choice:
             break
 
-        if choice == "+":
+        if choice == COL_CREATE:
             _create_collection(collections)
 
-        elif choice.lower() == "e":
+        elif choice == COL_EDIT:
             if not collections:
                 warning("No collections yet.")
             else:
@@ -489,33 +489,33 @@ def collection_manager():
                         "Cancel",
                     ],
                 )
-                if sub == "1":
+                if sub == COL_VIEW:
                     _view_collection(_load())
-                elif sub == "2":
+                elif sub == COL_ADD:
                     _add_to_collection(_load())
-                elif sub == "3":
+                elif sub == COL_REMOVE:
                     _remove_from_collection(_load())
 
-        elif choice.lower() == "s":
+        elif choice == COL_STATS:
             if collections:
                 _collection_statistics(_load())
             else:
                 warning("No collections yet.")
 
-        elif choice.lower() == "x":
+        elif choice == COL_EXPORT:
             if collections:
                 _export_collection(_load())
             else:
                 warning("No collections yet.")
 
-        elif choice.lower() == "i":
+        elif choice == COL_ICON:
             if collections:
                 _set_icon(collections)
             else:
                 warning("No collections yet.")
 
-        elif choice.lower() == "r":
+        elif choice == COL_RENAME:
             _rename_collection(collections)
 
-        elif choice.lower() == "d":
+        elif choice == COL_DELETE:
             _delete_collection(collections)

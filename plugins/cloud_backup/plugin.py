@@ -1,5 +1,6 @@
 import zipfile
 import io
+import requests
 from datetime import datetime
 from pathlib import Path
 
@@ -93,8 +94,6 @@ class GitHubProvider(BackupProvider):
             log("Invalid number for keep_last", "WARN")
 
     def upload(self, data: bytes, settings: dict, log) -> str | None:
-        import requests
-
         token = settings.get("github_token", "")
         owner = settings.get("github_owner", "")
         repo = settings.get("github_repo", "")
@@ -146,9 +145,10 @@ class GitHubProvider(BackupProvider):
         return None
 
     def _cleanup_old_releases(self, settings: dict, log):
-        import requests
-
-        keep = int(settings.get("keep_last", 5))
+        try:
+            keep = int(settings.get("keep_last", 5))
+        except (ValueError, TypeError):
+            keep = 5
         if keep < 1:
             return
 

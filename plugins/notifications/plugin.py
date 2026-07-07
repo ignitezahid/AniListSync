@@ -20,6 +20,7 @@ def _notify(title: str, body: str):
             ],
             capture_output=True,
             creationflags=subprocess.CREATE_NO_WINDOW,
+            timeout=5,
         )
         return
     except Exception:

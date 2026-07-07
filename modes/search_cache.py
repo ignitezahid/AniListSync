@@ -2,6 +2,7 @@ from utils.constants import CACHE_FILE
 from utils.file_utils import load_json, save_json
 from utils.ui import ask, pause, success, warning, show_header, show_menu
 from utils.ui import show_key_value_table
+from utils.menu_keys import *  # noqa: F405
 from modes.tools import export_search_cache
 def export_cache():
 
@@ -25,25 +26,25 @@ def search_cache_menu():
             ],
         )
 
-        if choice == "1":
+        if choice == CACHE_VIEW:
             view_cache()
 
-        elif choice == "2":
+        elif choice == CACHE_SEARCH:
             search_cache()
 
-        elif choice == "3":
+        elif choice == CACHE_DELETE:
             delete_cache_entry()
 
-        elif choice == "4":
+        elif choice == CACHE_CLEAR:
             clear_cache()
 
-        elif choice == "5":
+        elif choice == CACHE_EXPORT:
             export_cache()
 
-        elif choice == "6":
+        elif choice == CACHE_STATS:
             cache_statistics()
 
-        elif choice == "7":
+        elif choice == CACHE_BACK:
             break
 
         else:
@@ -101,17 +102,15 @@ def view_cache():
 
         choice = ask(">").lower()
 
-        if choice == "n":
-
+        if choice == PAGE_NEXT:
             if end < len(entries):
                 page += 1
 
-        elif choice == "p":
-
+        elif choice == PAGE_PREV:
             if page > 0:
                 page -= 1
 
-        elif choice == "q":
+        elif choice == PAGE_BACK:
 
             break
 

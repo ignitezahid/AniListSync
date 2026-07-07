@@ -3,6 +3,7 @@ import re
 from anilist import ALIASES, save_alias, search_candidates
 from utils.file_utils import save_json
 from utils.ui import ask, console, pause, success, warning, show_header, show_key_value_table, show_menu
+from utils.menu_keys import *  # noqa: F405
 
 
 def alias_manager():
@@ -23,36 +24,28 @@ def alias_manager():
             ],
         )
 
-        if choice == "1":
-
+        if choice == ALIAS_VIEW:
             view_aliases()
 
-        elif choice == "2":
-
+        elif choice == ALIAS_SEARCH:
             search_alias()
 
-        elif choice == "3":
-
+        elif choice == ALIAS_EDIT:
             edit_alias()
 
-        elif choice == "4":
-
+        elif choice == ALIAS_MERGE:
             merge_aliases()
 
-        elif choice == "5":
-
+        elif choice == ALIAS_DELETE:
             delete_alias()
 
-        elif choice == "6":
-
+        elif choice == ALIAS_DEDUP:
             detect_duplicates()
 
-        elif choice == "7":
-
+        elif choice == ALIAS_STATS:
             alias_statistics()
 
-        elif choice == "8":
-
+        elif choice == ALIAS_BACK:
             break
 
         else:
@@ -94,19 +87,19 @@ def view_aliases():
 
         choice = ask(">").lower()
 
-        if choice == "n":
+        if choice == PAGE_NEXT:
 
             if end < len(aliases):
 
                 page += 1
 
-        elif choice == "p":
+        elif choice == PAGE_PREV:
 
             if page > 0:
 
                 page -= 1
 
-        elif choice == "q":
+        elif choice == PAGE_BACK:
 
             break
 
@@ -196,9 +189,15 @@ def edit_alias():
 
         print(f"{i}. {title} ({score:.1f}%)")
 
-    pick = int(
-        ask()
-    )
+    try:
+        pick = int(ask())
+    except ValueError:
+        warning("Invalid selection.")
+        return
+
+    if pick < 1 or pick > len(candidates):
+        warning("Invalid selection.")
+        return
 
     result = candidates[pick-1][1]
 

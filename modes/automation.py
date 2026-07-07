@@ -1,7 +1,10 @@
 from utils.ui import show_header, console, ask, warning, success
 from utils.backup import backup_file
+from utils.constants import ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE
+from utils.menu_keys import *  # noqa: F405
 from settings import set_setting, get_setting
 from core.plugin_loader import plugin_manager
+from modes.tools import _compute_health_score, library_health
 
 
 def _status(key: str) -> str:
@@ -40,14 +43,14 @@ def automation_menu():
         console.print()
         choice = ask("Choice:")
 
-        if choice == "1":
+        if choice == AUTO_TOGGLE:
             set_setting("automation_enabled", not get_setting("automation_enabled"))
             if get_setting("automation_enabled"):
                 success("Scheduled sync enabled.")
             else:
                 warning("Scheduled sync disabled.")
 
-        elif choice == "2":
+        elif choice == AUTO_INTERVAL:
             console.print()
             console.print("  Interval options:")
             console.print("  1. 15 minutes")
@@ -62,25 +65,24 @@ def automation_menu():
                 set_setting("automation_interval_minutes", mapping[pick])
                 success(f"Interval set to {mapping[pick]} minutes.")
 
-        elif choice == "3":
+        elif choice == AUTO_STARTUP:
             set_setting("sync_on_startup", not get_setting("sync_on_startup"))
 
-        elif choice == "4":
+        elif choice == AUTO_LIVE:
             set_setting("live_tracking_on_startup", not get_setting("live_tracking_on_startup"))
 
-        elif choice == "5":
+        elif choice == AUTO_BACKUP:
             set_setting("auto_backup_before_sync", not get_setting("auto_backup_before_sync"))
 
-        elif choice == "6":
+        elif choice == AUTO_HEALTH:
             set_setting("auto_health_after_sync", not get_setting("auto_health_after_sync"))
 
-        elif choice == "7":
+        elif choice == AUTO_BACK:
             break
 
 
 def run_auto_backup():
     if get_setting("auto_backup_before_sync"):
-        from utils.constants import ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE
         console.print()
         console.print("  [title]Auto Backup[/]")
         for f in [ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE]:
@@ -90,10 +92,8 @@ def run_auto_backup():
 
 def run_auto_health():
     if get_setting("auto_health_after_sync"):
-        from modes.tools import _compute_health_score
         pct, _, _ = _compute_health_score()
         if pct <= 60:
-            from modes.tools import library_health
             console.print()
             console.print("  [title]Auto Health Scan[/]")
             library_health()

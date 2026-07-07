@@ -18,6 +18,7 @@ from core.plugin_loader import plugin_manager
 from telegram_client import client
 from utils import logger
 from utils.backup import backup_file
+from utils.menu_keys import *  # noqa: F405
 from utils.constants import ALIASES_FILE, CACHE_FILE, RESUME_FILE, RETRY_FILE
 from utils.file_utils import load_json, save_json
 from utils.ui import (
@@ -185,17 +186,17 @@ def choose_franchise(result: dict) -> list[dict]:
         ],
     )
 
-    if choice == "2":
+    if choice == RELATED_ADD_ALL:
         return [selected] + available
 
-    elif choice == "3":
+    elif choice == RELATED_SEARCH:
         return "search_again"
 
-    elif choice == "4":
+    elif choice == RELATED_ORDER:
         generate_watch_order(selected, related)
         return "search_again"
 
-    if choice == "5":
+    if choice == RELATED_CHOOSE:
         flat = []
         for fmt in format_order:
             flat.extend(groups.get(fmt, []))
@@ -228,7 +229,7 @@ def choose_franchise(result: dict) -> list[dict]:
             unique.append(anime)
         return unique
 
-    if choice == "6":
+    if choice == RELATED_CANCEL:
         return []
 
     return [selected]

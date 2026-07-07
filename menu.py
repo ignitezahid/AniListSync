@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import json
+import re as _re
 
 from rich.panel import Panel
 from rich.align import Align
@@ -19,6 +21,8 @@ from mal import (
 from utils.constants import BACKUP_DIR, EXPORT_DIR, RETRY_FILE
 from utils.file_utils import load_json
 from core.plugin_loader import plugin_manager
+from settings import get_setting
+from modes.tools import _compute_health_score
 
 
 def _connection_status(test_fn):
@@ -40,7 +44,6 @@ def _telegram_status():
 
 def _load_state():
     try:
-        import json
         with open("state.json", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
@@ -95,10 +98,6 @@ def show_dashboard():
     state = _load_state()
     anilist_count = state.get("anilist_entries", "?")
     mal_count = state.get("mal_entries", "?")
-
-    from settings import get_setting
-
-    import re as _re
 
     def _visible_width(s: str) -> int:
         plain = _re.sub(r"\[/?\w+(?: \w+=[^\]]*)?\]", "", s)
@@ -182,16 +181,15 @@ def show_dashboard():
                             next_str = f"{hours}h {mins_left}m"
                     else:
                         next_str = "Now"
-                    sync_lines.append(f"  Next Sync         {next_str}")
+                        sync_lines.append(f"  Next Sync         {next_str}")
                 except Exception:
                     pass
-        from modes.tools import _compute_health_score
-        try:
-            hp, _, _ = _compute_health_score()
-            color = "🟢" if hp >= 80 else ("🟡" if hp >= 50 else "🔴")
-            sync_lines.append(f"  Health            {color} {hp}%")
-        except Exception:
-            pass
+    try:
+        hp, _, _ = _compute_health_score()
+        color = "🟢" if hp >= 80 else ("🟡" if hp >= 50 else "🔴")
+        sync_lines.append(f"  Health            {color} {hp}%")
+    except Exception:
+        pass
 
     all_lines = conn_lines + lib_lines + storage_lines + sync_lines
     max_width = max(_visible_width(line) for line in all_lines) if all_lines else 0

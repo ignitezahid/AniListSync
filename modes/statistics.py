@@ -1,6 +1,7 @@
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+import json
 
 from rich.table import Table
 
@@ -60,7 +61,6 @@ def _export_stats_report(anime_list, status_counter, total_count, avg_eps, avg_s
                          telegram_found, most_studio, most_genre, most_year,
                          backup_count, export_count, cache_hits, cache_misses,
                          search_accuracy, retry_queue):
-    from datetime import datetime
     name = f"statistics_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     rows = []
     rows.append({"Section": "Library / AniList", "Value": str(len(anime_list))})
@@ -148,7 +148,6 @@ def statistics():
     state_path = Path("state.json")
     if state_path.exists():
         try:
-            import json
             with open(state_path, encoding="utf-8") as f:
                 state = json.load(f)
             ls = state.get("last_sync", "")
@@ -163,7 +162,6 @@ def statistics():
     usage_path = Path("data/usage_stats.json")
     if usage_path.exists():
         try:
-            import json
             with open(usage_path, encoding="utf-8") as f:
                 usage = json.load(f)
             durations = usage.get("sync_durations", [])

@@ -3,7 +3,14 @@ from utils.startup import startup_checks
 startup_checks()
 
 # noqa: E402
+import os  # noqa: E402
+import sys  # noqa: E402
 import traceback  # noqa: E402
+import warnings  # noqa: E402
+
+# Suppress harmless Windows asyncio proactor cleanup warnings from Telethon
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ProactorBasePipeTransport.*")
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed transport.*")
 
 from telegram_client import client  # noqa: E402
 from sync import main as sync_main  # noqa: E402
@@ -11,8 +18,15 @@ from menu import show_dashboard, show_main_menu  # noqa: E402
 from utils.ui import success, warning, console  # noqa: E402
 from utils.ui import reload_theme  # noqa: E402
 from settings import get_setting  # noqa: E402
-from modes.automation import run_auto_backup, run_auto_health  # noqa: E402
+from modes.automation import run_auto_backup, run_auto_health, automation_menu  # noqa: E402
+from modes.about import about  # noqa: E402
+from modes.manual_search import manual_search  # noqa: E402
+from modes.library_search import library_search  # noqa: E402
+from modes.compare import compare  # noqa: E402
+from modes.repair import repair  # noqa: E402
+from core.plugin_manager import plugin_menu  # noqa: E402
 from core.plugin_loader import plugin_manager  # noqa: E402
+from utils.menu_keys import *  # noqa: E402,F405
 
 plugin_manager.discover()
 reload_theme()
@@ -49,71 +63,62 @@ while True:
 
     choice = show_main_menu()
 
-    if choice == "1":
+    if choice == SYNC:
         run_sync()
 
-    elif choice == "2":
-
-        from modes.automation import automation_menu
-
+    elif choice == AUTOMATION:
+        plugin_manager.call_hook("on_automation")
         automation_menu()
 
-    elif choice == "3":
-        from modes.manual_search import manual_search
+    elif choice == MANUAL_SEARCH:
+        plugin_manager.call_hook("on_manual_search")
         manual_search()
 
-    elif choice == "4":
-
-        from modes.library_search import library_search
-
+    elif choice == LIBRARY_SEARCH:
+        plugin_manager.call_hook("on_library_search")
         library_search()
 
-    elif choice == "5":
+    elif choice == COLLECTIONS:
+        plugin_manager.call_hook("on_collections")
 
         from modes.collection_manager import collection_manager
 
         collection_manager()
 
-    elif choice == "6":
+    elif choice == STATISTICS:
+        plugin_manager.call_hook("on_statistics")
 
         from modes.statistics import statistics
 
         statistics()
 
-    elif choice == "7":
-
-        from modes.compare import compare
-
+    elif choice == COMPARE:
+        plugin_manager.call_hook("on_compare")
         if not _client_started:
             client.start()
             _client_started = True
         client.loop.run_until_complete(compare())
 
-    elif choice == "8":
-
-        from modes.repair import repair
-
+    elif choice == REPAIR:
+        plugin_manager.call_hook("on_repair")
         repair()
 
-    elif choice == "9":
+    elif choice == BULK_OPS:
+        plugin_manager.call_hook("on_bulk_operations")
 
         from modes.bulk_operations import bulk_operations
 
         bulk_operations()
 
-    elif choice == "10":
-
-        from core.plugin_manager import plugin_menu
-
+    elif choice == PLUGINS:
+        plugin_manager.call_hook("on_plugin_menu")
         plugin_menu()
 
-    elif choice == "11":
-
-        from modes.about import about
-
+    elif choice == ABOUT:
         about()
 
-    elif choice == "12":
+    elif choice == TOOLS:
+        plugin_manager.call_hook("on_tools")
 
         from modes.tools import data_center
 
@@ -122,12 +127,10 @@ while True:
             _client_started = True
         client.loop.run_until_complete(data_center())
 
-    elif choice == "13":
+    elif choice == EXIT:
 
         success("Goodbye!")
         plugin_manager.call_hook("on_shutdown")
-        import sys
-        import os
         sys.stdout.flush()
         os._exit(0)
 

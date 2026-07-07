@@ -2,6 +2,7 @@ from anilist import get_completed_anime
 from utils.file_utils import data_file, save_json
 from utils.ui import ask, console, show_header
 from difflib import get_close_matches as _fuzzy_match
+import json
 
 HISTORY_FILE = "search_history.json"
 MAX_HISTORY = 5
@@ -21,7 +22,6 @@ STATUS_LABELS = {
 
 def _load_history():
     try:
-        import json
         path = data_file(HISTORY_FILE)
         if path.exists():
             with open(path) as f:
