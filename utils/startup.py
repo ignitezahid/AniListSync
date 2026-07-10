@@ -83,7 +83,6 @@ def startup_checks():
 
     for folder in folders:
         Path(folder).mkdir(exist_ok=True)
-        print(f"  \u2713 {folder}")
 
     required_files = [
         "settings.json",

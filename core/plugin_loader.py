@@ -7,6 +7,10 @@ from typing import Callable
 from version import VERSION
 
 PLUGINS_DIR = Path("plugins")
+
+# Plugins deferred to after window show to speed up initial startup.
+# These are non-essential: Discord RPC, backups, notifications.
+LAZY_PLUGIN_IDS = {"discord_rpc", "cloud_backup", "notifications"}
 PLUGINS_STATE = Path("data/plugins.json")
 PLUGIN_LOGS_DIR = Path("logs/plugins")
 PLUGIN_DATA_DIR = Path("data/plugins")
@@ -62,7 +66,13 @@ class PluginManager:
         self._permissions_consent: dict[str, list[str]] = {}
         self._loaded_at: dict[str, str] = {}
 
-    def discover(self):
+    def discover(self, lazy_ok: bool = False):
+        """Scan and load plugins.
+
+        If ``lazy_ok`` is False (default), non-essential plugins listed in
+        ``LAZY_PLUGIN_IDS`` are only discovered (manifest read) but not loaded.
+        Call ``load_lazy_plugins()`` later to actually import them.
+        """
         self._plugins.clear()
         self._manifests.clear()
         self._errors.clear()
@@ -88,9 +98,25 @@ class PluginManager:
 
         ordered = _topological_sort(self._manifests)
         for pid in ordered:
+            if pid in LAZY_PLUGIN_IDS and not lazy_ok:
+                continue  # Defer until after window show
             if self._enabled.get(pid, True) and pid not in self._plugins and pid not in self._errors:
                 folder = PLUGINS_DIR / pid
                 self._load_plugin(folder, self._manifests[pid])
+
+    def load_lazy_plugins(self):
+        """Load plugins that were deferred by discover(lazy_ok=False)."""
+        for pid in sorted(LAZY_PLUGIN_IDS):
+            if pid in self._plugins or pid in self._errors:
+                continue
+            if pid not in self._manifests:
+                continue
+            if not self._enabled.get(pid, True):
+                continue
+            folder = PLUGINS_DIR / pid
+            self._load_plugin(folder, self._manifests[pid])
+        # Fire on_startup hooks for any newly loaded lazy plugins
+        self.call_hook("on_startup")
 
     def _validate_manifest(self, path: Path) -> dict | None:
         try:

@@ -5,3 +5,9 @@ rich>=14.0.0
 openpyxl
 pypresence>=4.0.0
 plyer>=2.0.0
+PyQt6
+qasync
+
+# Optional: Cloud Backup (S3 / Google Drive)
+# boto3       # for S3 provider (pip install boto3)
+# google-api-python-client google-auth-oauthlib  # for Google Drive provider

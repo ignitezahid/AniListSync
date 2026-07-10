@@ -1,3 +1,4 @@
+import asyncio
 from telethon import TelegramClient
 
 _chat_sources: list[str] | None = None
@@ -66,19 +67,22 @@ def iter_all_sources():
 async def _ensure_client_auth(c: TelegramClient) -> bool:
     try:
         if not c.is_connected():
-            await c.connect()
+            await asyncio.wait_for(c.connect(), timeout=5)
         if not await c.is_user_authorized():
             return False
         return True
-    except Exception:
+    except (asyncio.TimeoutError, Exception):
         return False
 
 
 async def ensure_connected() -> bool:
-    primary_ok = await _ensure_client_auth(client)
-    for entry in _account_clients:
-        await _ensure_client_auth(entry["client"])
-    return primary_ok
+    try:
+        primary_ok = await asyncio.wait_for(_ensure_client_auth(client), timeout=5)
+        for entry in _account_clients:
+            await asyncio.wait_for(_ensure_client_auth(entry["client"]), timeout=5)
+        return primary_ok
+    except (asyncio.TimeoutError, Exception):
+        return False
 
 
 async def disconnect_client() -> None:

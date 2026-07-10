@@ -1,9 +1,9 @@
 {
     "name": "Cloud Backup",
     "id": "cloud_backup",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "author": "ignitezahid",
-    "description": "Creates compressed backups of your data and uploads them to GitHub Releases automatically.",
+    "description": "Creates compressed backups of your data and uploads them to GitHub Releases, Amazon S3 (or compatible), or Google Drive automatically.",
     "website": "https://github.com/ignitezahid/AniListSync",
     "repository": "https://github.com/ignitezahid/AniListSync",
     "license": "MIT",

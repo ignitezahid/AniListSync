@@ -1,5 +1,38 @@
 # Changelog
 
+## v3.0.0 (2026-07-10)
+
+### Added
+- 🖥️ **Desktop GUI** — full PyQt6 graphical interface alongside the CLI, launch with `--gui` flag
+- 📊 **Dashboard** — card-based overview with connection status (Telegram/AniList/MAL), library stats, storage metrics, and sync timeline
+- ⚙️ **Dashboard gear menu** — compact ⚙ button in the top-right with Reset Cache (with confirmation) and Restore Hidden Cards options
+- 🎨 **Light & Dark themes** — proper white (#F5F5F5 background) and near-black (#0D1117) theme toggles with full text color support
+- 🔵 **System tray icon** — colored circle with "A" letter that matches the active theme accent, with Show/Hide and Quit context menu
+- 🎴 **Customizable card layout** — right-click any dashboard card to hide it; restore via the gear menu
+- 🔔 **Notification settings UI** — toggle desktop notifications for sync, backup, health, and anime additions from the Settings page
+- 📈 **Connection caching** — connection status persisted to disk so dashboard shows real status immediately on cold start (no "Checking..." flash)
+- 🧩 **Lazy plugin loading** — non-essential plugins (Discord RPC, Cloud Backup, Notifications) loaded after window appears for instant startup
+- 🏃 **Background health scoring** — health percentage computed in a background thread, never blocks the UI
+- 💫 **Health fade-in animation** — smooth opacity transition when health score updates
+- ⏱ **Live Last Sync timer** — relative time updates every 60 seconds ("5 min ago" → "6 min ago")
+- 🎨 **StatCard age coloring** — Last Sync card border changes: green (<1h), yellow (1-6h), orange (6-24h), red (>24h)
+- 🌈 **Animated splash screen** — branded splash shown during startup with status messages
+- 🚀 **Instant window show** — window appears immediately, background loading continues after
+
+### Changed
+- 🎨 **Theme text colors** — light theme now has dark text (#1A1A1A), bold text via `!important` override, improved contrast ratios
+- 🎨 **Light palette** — `bg: #F5F5F5`, `light: #FFFFFF` for clear card separation, `text_muted: #5A5A5A` for readability
+- 🍳 **Unified tooltips** — HTML table format with local timezone, proper alignment, no redundant info in Health tooltip
+- 🏗️ **Version bumped** from 2.9.0 to 3.0.0
+
+### Fixed
+- 🐛 **Sync timestamp timezone** — tooltips now show local time instead of raw UTC (e.g., 22:32 instead of 17:02)
+- 🐛 **Pluralization** — "2 day ago" → "2 days ago", "5h ago" → "5 hours ago"
+- 🐛 **Telegram client timeout** — 5s timeout on client connect to prevent hangs
+- 🐛 **Tooltip alignment** — HTML `<table>` layout guarantees time appears directly below date
+
+---
+
 ## v2.9.0 (2026-07-07)
 
 ### Added

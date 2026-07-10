@@ -19,6 +19,15 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Build artifacts
+build/
+dist/
+*.spec
+!build_gui.spec
+
+# Spurious Windows NUL device
+nul
+
 # Agent/editor metadata
 .agents/
 .codex/

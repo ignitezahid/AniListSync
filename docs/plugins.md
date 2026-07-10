@@ -106,7 +106,7 @@ Hooks are methods on your Plugin class that the framework calls at specific poin
 | `on_load()` | After plugin is instantiated | — |
 | `on_unload()` | Plugin is disabled | — |
 | `on_startup()` | App starts (after `discover()`) | — |
-| `on_shutdown()` | App exits (menu option 13) | — |
+| `on_shutdown()` | App exits | — |
 
 ### Sync
 
@@ -116,18 +116,59 @@ Hooks are methods on your Plugin class that the framework calls at specific poin
 | `on_anime_added(anime)` | Each title processed | `anime` — the anime dict |
 | `on_sync_finish()` | Sync completes | — |
 
+### Navigation / Menu (CLI)
+
+| Hook | When | Args |
+|---|---|---|
+| `on_idle()` | Main loop idle tick | — |
+| `on_automation()` | Automation menu opened | — |
+| `on_manual_search()` | Search menu opened | — |
+| `on_library_search()` | Library search opened | — |
+| `on_collections()` | Collection manager opened | — |
+| `on_statistics()` | Statistics screen opened | — |
+| `on_compare()` | Compare tool opened | — |
+| `on_repair()` | Repair tool opened | — |
+| `on_bulk_operations()` | Bulk Ops menu opened | — |
+| `on_plugin_menu()` | Plugin manager opened | — |
+| `on_tools()` | Tools menu opened | — |
+
 ### Library Management
 
 | Hook | When | Args |
 |---|---|---|
-| `on_automation()` | Automation menu opened | — |
-| `on_statistics()` | Statistics screen opened | — |
-| `on_collections()` | Collection manager opened | — |
 | `on_health_scan()` | Library health scan run | — |
 | `on_backup(path)` | Backup file created | `path` — path string of backup |
 | `on_restore(path)` | Backup restored | `path` — path string of restored file |
 
 ---
+
+## GUI Plugin Integration (v3.0.0+)
+
+AniListSync v3.0.0 adds a **Graphical UI** alongside the CLI. In GUI mode:
+
+- The **Plugin tab** in the navigation sidebar shows all plugins with enable/disable, reload, view/clear log, and run commands.
+- The GUI reuses the same `call_hook()` mechanism — hooks like `on_sync_start`, `on_sync_finish`, `on_backup`, and `on_restore` fire from GUI pages too.
+- Plugins are **lazy-loaded** by default: loaded after the main window appears so the GUI starts instantly. Non-essential plugins (Discord RPC, Cloud Backup, Notifications) use this mechanism.
+- Themes can be changed from the **Settings** page via a dropdown or via the **system tray icon** context menu.
+
+---
+
+## Lazy Loading (v3.0.0+)
+
+Plugins can be deferred — loaded after the UI is shown instead of during startup.
+
+To mark a plugin for lazy loading, add `"lazy": true` to its manifest:
+
+```json
+{
+    "name": "My Plugin",
+    "id": "my_plugin",
+    "lazy": true,
+    ...
+}
+```
+
+Lazy plugins still receive the same hooks once loaded. The `on_startup` hook fires when the plugin is actually activated, not at app launch.
 
 ## Commands
 
