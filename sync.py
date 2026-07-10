@@ -380,7 +380,7 @@ def add_anime_batch(
     return True
 
 
-async def import_old_messages(stats: dict, last_message_id: int) -> None:
+async def import_old_messages(stats: dict, last_message_id: int, gui_mode: bool = False, prompt_handler=None) -> None:
     global processed_titles
 
     print("Importing from Saved Messages...\n")
@@ -394,7 +394,7 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
     if retry_queue:
         print(f"Retrying {len(retry_queue)} previously failed anime...")
 
-    async def process_title(title: str) -> None:
+    async def process_title(title: str, gui_mode: bool = False) -> None:
         if not title:
             return
         if title in processed_titles:
@@ -407,67 +407,106 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
         result = search_anime(title)
         if not result:
-            while True:
-                option = show_menu(
-                    f"Anime not found: {title}",
-                    [
-                        "Search Again",
-                        "Skip",
-                    ],
-                )
-
-                if option == "2":
+            # GUI mode: use prompt_handler dialogs instead of stdin
+            if gui_mode and prompt_handler:
+                action = await prompt_handler(title)
+                if action.get("action") == "skip":
                     stats["not_found"] += 1
                     if title not in retry_queue:
                         retry_queue.add(title)
                         save_retry_queue(retry_queue)
-                    logger.warning(
-                        f"[NOT FOUND] {title}"
-                    )
+                    print(f"  Skipped: {title}")
                     return
-
-                if option != "1":
-                    warning("Invalid choice.")
-                    continue
-
-                query = ask("Search (Enter = reuse title):")
-                if not query:
-                    query = title
-
-                candidates = search_candidates(query)
-                if not candidates:
-                    warning("No results.")
-                    continue
-
-                print()
-                for i, (score, anime) in enumerate(candidates, 1):
-                    print(
-                        f"{i}. "
-                        f"{anime['title']['english'] or anime['title']['romaji']} "
-                        f"({score:.1f}%)"
+                elif action.get("action") == "use":
+                    result = action["result"]
+                    save_alias(title, result)
+                else:
+                    # fallback: skip
+                    stats["not_found"] += 1
+                    if title not in retry_queue:
+                        retry_queue.add(title)
+                        save_retry_queue(retry_queue)
+                    print(f"  Not found (skipped): {title}")
+                    return
+            elif gui_mode:
+                # No handler provided — skip silently
+                stats["not_found"] += 1
+                if title not in retry_queue:
+                    retry_queue.add(title)
+                    save_retry_queue(retry_queue)
+                print(f"  Not found (skipped): {title}")
+                return
+            else:
+                # CLI mode: interactive stdin prompts
+                while True:
+                    option = show_menu(
+                        f"Anime not found: {title}",
+                        [
+                            "Search Again",
+                            "Skip",
+                        ],
                     )
 
-                try:
-                    pick = int(ask())
-                except ValueError:
-                    warning("Invalid choice.")
-                    continue
+                    if option == "2":
+                        stats["not_found"] += 1
+                        if title not in retry_queue:
+                            retry_queue.add(title)
+                            save_retry_queue(retry_queue)
+                        logger.warning(
+                            f"[NOT FOUND] {title}"
+                        )
+                        return
 
-                if pick < 1 or pick > len(candidates):
-                    warning("Invalid choice.")
-                    continue
+                    if option != "1":
+                        warning("Invalid choice.")
+                        continue
 
-                result = candidates[pick - 1][1]
+                    query = ask("Search (Enter = reuse title):")
+                    if not query:
+                        query = title
 
-                # Always save using Telegram title (NOT query)
-                save_alias(title, result)
-                break
+                    candidates = search_candidates(query)
+                    if not candidates:
+                        warning("No results.")
+                        continue
 
-        selected_anime = interactive_search(title)
+                    print()
+                    for i, (score, anime) in enumerate(candidates, 1):
+                        print(
+                            f"{i}. "
+                            f"{anime['title']['english'] or anime['title']['romaji']} "
+                            f"({score:.1f}%)"
+                        )
+
+                    try:
+                        pick = int(ask())
+                    except ValueError:
+                        warning("Invalid choice.")
+                        continue
+
+                    if pick < 1 or pick > len(candidates):
+                        warning("Invalid choice.")
+                        continue
+
+                    result = candidates[pick - 1][1]
+
+                    # Always save using Telegram title (NOT query)
+                    save_alias(title, result)
+                    break
+
+        # GUI mode: skip interactive_search(), just use the auto-found result
+        if gui_mode:
+            if result:
+                selected_anime = [result]
+            else:
+                return
+        else:
+            selected_anime = interactive_search(title)
 
         if not selected_anime:
-            stats["cancelled"] += 1
-            warning("Cancelled.")
+            if not gui_mode:
+                stats["cancelled"] += 1
+                warning("Cancelled.")
             return
 
         if not add_anime_batch(selected_anime, stats, retry_queue, title):
@@ -517,7 +556,7 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
 
             if title not in processed_titles:
                 progress.stop()
-                await process_title(title)
+                await process_title(title, gui_mode=gui_mode)
                 progress.start()
 
             info = title_to_msg_id.get(title)
@@ -526,21 +565,6 @@ async def import_old_messages(stats: dict, last_message_id: int) -> None:
                 save_resume(msg_id, chat)
 
             progress.advance(task)
-
-
-_watchers_registered = False
-
-
-def _register_watchers():
-    global _watchers_registered
-    if _watchers_registered:
-        return
-    _watchers_registered = True
-    from telegram_client import get_all_clients
-
-    for c, sources in get_all_clients():
-        for src in sources:
-            _register_single_watcher(c, src)
 
 
 def _register_single_watcher(c, src):
@@ -573,7 +597,7 @@ async def _handle_new_message(event, source_key: str):
     save_resume(event.id, source_key)
 
 
-async def main(gui_mode: bool = False) -> None:
+async def main(gui_mode: bool = False, prompt_handler=None) -> None:
     global completed_ids, mal_completed_ids, processed_titles, _importing
 
     sync_start = time_module.time()
@@ -620,7 +644,7 @@ async def main(gui_mode: bool = False) -> None:
     last_message_id = load_resume()
 
     _importing = True
-    await import_old_messages(stats, last_message_id)
+    await import_old_messages(stats, last_message_id, gui_mode=gui_mode, prompt_handler=prompt_handler)
     _importing = False
 
     show_key_value_table(

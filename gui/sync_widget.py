@@ -131,7 +131,7 @@ class SyncWidget(QWidget):
 
                 self._relay.progress.emit(30, "Importing from Telegram...")
                 from sync import main as sync_main
-                await sync_main(gui_mode=True)
+                await sync_main(gui_mode=True, prompt_handler=self._sync_prompt_handler)
                 self._relay.progress.emit(85, "Running health check...")
                 run_auto_health()
                 self._relay.progress.emit(100, "Sync completed")
@@ -176,6 +176,63 @@ class SyncWidget(QWidget):
 
         QTimer.singleShot(2000, self._progress.hide)
         plugin_manager.call_hook("on_sync_finish")
+
+    async def _sync_prompt_handler(self, title: str) -> dict:
+        """Handle an unmatched title during sync via GUI dialogs.
+        Called by sync.py when gui_mode=True and a title is not found."""
+        from PyQt6.QtWidgets import QMessageBox, QInputDialog
+
+        # Step 1: Ask Skip or Search
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Anime Not Found")
+        msg.setText(f"Could not find anime:\n{title}")
+        msg.setInformativeText("What would you like to do?")
+        skip_btn = msg.addButton("Skip", QMessageBox.ButtonRole.RejectRole)
+        search_btn = msg.addButton("Search", QMessageBox.ButtonRole.AcceptRole)
+        msg.setDefaultButton(search_btn)
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.exec()
+
+        if msg.clickedButton() == skip_btn:
+            return {"action": "skip"}
+
+        # Step 2: Get search query
+        query, ok = QInputDialog.getText(self, "Search Anime",
+            f"Search for '{title}':", text=title)
+        if not ok or not query.strip():
+            return {"action": "skip"}
+
+        # Step 3: Search candidates
+        from anilist import search_candidates
+        candidates = search_candidates(query.strip())
+        if not candidates:
+            QMessageBox.information(self, "No Results",
+                f"No results found for: {query}")
+            return {"action": "skip"}
+
+        if len(candidates) == 1:
+            return {"action": "use", "result": candidates[0][1]}
+
+        # Step 4: Let user pick from candidates
+        items = [
+            f"{anime['title']['english'] or anime['title']['romaji']} ({score:.0f}%)"
+            for score, anime in candidates
+        ]
+        item, ok = QInputDialog.getItem(self, "Select Anime",
+            "Choose the correct match:", items, 0, False)
+        if not ok or not item:
+            return {"action": "skip"}
+
+        # Find the selected candidate
+        for score, anime in candidates:
+            display = (
+                f"{anime['title']['english'] or anime['title']['romaji']} "
+                f"({score:.0f}%)"
+            )
+            if display == item:
+                return {"action": "use", "result": anime}
+
+        return {"action": "skip"}
 
     def reapply_theme(self):
         self._log.setStyleSheet(get_log_stylesheet())

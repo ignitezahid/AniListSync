@@ -111,6 +111,16 @@ if getattr(sys, 'frozen', False):
         sys.__excepthook__(t, v, tb) if sys.__excepthook__ is not None else None
     )
 
+    # Ensure config.py exists on-disk (created from bundled example)
+    example_cfg = os.path.join(BASE_DIR, 'config.example.py')
+    config_py = os.path.join(BASE_DIR, 'config.py')
+    if not os.path.exists(config_py) and os.path.exists(example_cfg):
+        shutil.copy2(example_cfg, config_py)
+
+    # Add BASE_DIR to sys.path so 'import config' loads from filesystem,
+    # NOT from the frozen module inside the EXE (which we excluded via build_gui.spec)
+    sys.path.insert(0, BASE_DIR)
+
 from gui.app import launch_gui
 
 try:

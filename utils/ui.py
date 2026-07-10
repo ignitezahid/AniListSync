@@ -92,7 +92,8 @@ def watcher_ready() -> None:
 
 
 def pause():
-    """Pause until the user presses ESC."""
+    """Pause until the user presses ESC.
+    Safe to call from GUI (no stdin) — returns immediately."""
 
     warning("Press ESC to return.")
     while True:
@@ -103,15 +104,23 @@ def pause():
                     break
         except (EOFError, KeyboardInterrupt):
             break
+        except RuntimeError:
+            # No console available (GUI mode) — return immediately
+            break
 
 
 def ask(prompt: str = "Choice:"):
-    """Prompt the user for input."""
+    """Prompt the user for input.
+    Returns empty string if stdin is unavailable (GUI mode)."""
 
     try:
         return console.input(f"[menu]{prompt}[/] ").strip()
     except EOFError:
         return ""
+    except RuntimeError as e:
+        if "lost sys.stdin" in str(e):
+            return ""
+        raise
     except KeyboardInterrupt:
         raise
 

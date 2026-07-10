@@ -98,6 +98,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
+        'config',
         'tkinter',
         'test',
         'unittest',

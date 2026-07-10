@@ -24,10 +24,16 @@ from .common import _export_dataset
 
 
 def _health_input():
-    """Read input with ESC support. Returns the string or None if ESC pressed."""
+    """Read input with ESC support. Returns the string or None if ESC pressed.
+    Safe to call from GUI (no console) — returns None immediately."""
     buf = ""
+    try:
+        _has_console = msvcrt.kbhit() or True
+    except RuntimeError:
+        return None
     while True:
-        if msvcrt.kbhit():
+        try:
+            if msvcrt.kbhit():
             key = msvcrt.getch()
             if key == b"\x1b":
                 return None
@@ -45,6 +51,8 @@ def _health_input():
                     print(ch, end="", flush=True)
                 except UnicodeDecodeError:
                     pass
+    except RuntimeError:
+        return None
 
 
 def _export_health_report(pct, groups, issues):
