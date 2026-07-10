@@ -28,31 +28,31 @@ def _health_input():
     Safe to call from GUI (no console) — returns None immediately."""
     buf = ""
     try:
-        _has_console = msvcrt.kbhit() or True
+        msvcrt.kbhit()
     except RuntimeError:
         return None
     while True:
         try:
             if msvcrt.kbhit():
-            key = msvcrt.getch()
-            if key == b"\x1b":
-                return None
-            if key == b"\r":
-                return buf
-            if key == b"\x7f" or key == b"\x08":
-                buf = buf[:-1]
-                print("\b \b", end="", flush=True)
-            elif key in (b"\xe0", b"\x00"):
-                msvcrt.getch()
-            else:
-                try:
-                    ch = key.decode("utf-8")
-                    buf += ch
-                    print(ch, end="", flush=True)
-                except UnicodeDecodeError:
-                    pass
-    except RuntimeError:
-        return None
+                key = msvcrt.getch()
+                if key == b"\x1b":
+                    return None
+                if key == b"\r":
+                    return buf
+                if key == b"\x7f" or key == b"\x08":
+                    buf = buf[:-1]
+                    print("\b \b", end="", flush=True)
+                elif key in (b"\xe0", b"\x00"):
+                    msvcrt.getch()
+                else:
+                    try:
+                        ch = key.decode("utf-8")
+                        buf += ch
+                        print(ch, end="", flush=True)
+                    except UnicodeDecodeError:
+                        pass
+        except RuntimeError:
+            return None
 
 
 def _export_health_report(pct, groups, issues):

@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import sys
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout,
@@ -137,29 +138,28 @@ class MainWindow(QMainWindow):
         self._tray.show()
 
     def _update_tray_icon(self):
-        """Draw a colored circle with 'A' letter using the current theme accent."""
-        try:
-            from core.plugin_loader import plugin_manager as _pm
-            from gui.theme import THEME_ACCENTS
-            active = _pm._settings.get("themes", {}).get("active", "Default")
-            accent = THEME_ACCENTS.get(active, "#7AA2F7")
-        except Exception:
-            accent = "#7AA2F7"
-
-        size = 64
-        pm = QPixmap(size, size)
-        pm.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pm)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor(accent))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(2, 2, size - 4, size - 4)
-        painter.setPen(QColor("#FFFFFF"))
-        fnt = QFont("Segoe UI", 32, QFont.Weight.Bold)
-        painter.setFont(fnt)
-        painter.drawText(pm.rect(), Qt.AlignmentFlag.AlignCenter, "A")
-        painter.end()
-        icon = QIcon(pm)
+        """Set the window and tray icon from app_icon.ico.
+        Searches the working directory and MEIPASS for the icon file."""
+        icon = QIcon()
+        candidates = [Path("app_icon.ico")]
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            candidates.append(Path(sys._MEIPASS) / "app_icon.ico")
+        for path in candidates:
+            if path.exists():
+                icon = QIcon(str(path))
+                break
+        else:
+            # Fallback: draw a simple colored circle
+            size = 64
+            pm = QPixmap(size, size)
+            pm.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pm)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QColor("#7aa2f7"))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(2, 2, size - 4, size - 4)
+            painter.end()
+            icon = QIcon(pm)
         if hasattr(self, '_tray'):
             self._tray.setIcon(icon)
         self.setWindowIcon(icon)

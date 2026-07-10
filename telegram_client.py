@@ -30,7 +30,12 @@ if _accounts_data:
     _first = _accounts_data[0]
 else:
     _first = {"api_id": cfg.API_ID, "api_hash": cfg.API_HASH, "session_name": getattr(cfg, "SESSION_NAME", "telegram_session")}
-client = TelegramClient(_first["session_name"], _first["api_id"], _first["api_hash"])
+try:
+    client = TelegramClient(_first["session_name"], _first["api_id"], _first["api_hash"])
+except (ValueError, TypeError):
+    client = None
+    import logging
+    logging.warning("TelegramClient creation deferred — API credentials not configured yet.")
 
 
 def init_accounts():
@@ -38,21 +43,26 @@ def init_accounts():
     _account_clients = []
     # Skip index 0 (primary) — module-level `client` already handles it
     for acct in _accounts_data[1:]:
-        c = TelegramClient(
-            acct.get("session_name", f"telegram_{acct['api_id']}"),
-            acct["api_id"],
-            acct["api_hash"],
-        )
-        _account_clients.append({
-            "client": c,
-            "sources": acct.get("sources", ["me"]),
-        })
+        try:
+            c = TelegramClient(
+                acct.get("session_name", f"telegram_{acct['api_id']}"),
+                acct["api_id"],
+                acct["api_hash"],
+            )
+            _account_clients.append({
+                "client": c,
+                "sources": acct.get("sources", ["me"]),
+            })
+        except (ValueError, TypeError):
+            continue
 
 
 def get_all_clients() -> list[tuple[TelegramClient, list[str]]]:
     if not _account_clients and getattr(cfg, "TELEGRAM_ACCOUNTS", None):
         init_accounts()
-    result = [(client, get_chat_sources())]
+    result = []
+    if client is not None:
+        result.append((client, get_chat_sources()))
     for entry in _account_clients:
         result.append((entry["client"], entry["sources"]))
     return result
@@ -76,6 +86,8 @@ async def _ensure_client_auth(c: TelegramClient) -> bool:
 
 
 async def ensure_connected() -> bool:
+    if client is None:
+        return False
     try:
         primary_ok = await asyncio.wait_for(_ensure_client_auth(client), timeout=5)
         for entry in _account_clients:
@@ -86,7 +98,11 @@ async def ensure_connected() -> bool:
 
 
 async def disconnect_client() -> None:
-    for c in [client] + [e["client"] for e in _account_clients]:
+    clients = []
+    if client is not None:
+        clients.append(client)
+    clients.extend(e["client"] for e in _account_clients)
+    for c in clients:
         try:
             if getattr(c, "is_connected", lambda: False)():
                 await c.disconnect()
