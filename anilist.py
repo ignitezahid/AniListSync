@@ -124,7 +124,7 @@ def find_best_match(media, title):
     return best, best_score
 
 
-def rank_candidates(candidates, title):
+def rank_candidates(candidates, title, limit=5):
     ranked = []
     for anime in candidates.values():
         best_score = 0
@@ -145,7 +145,9 @@ def rank_candidates(candidates, title):
             best_score = max(best_score, score)
         ranked.append((best_score, anime))
     ranked.sort(reverse=True, key=lambda x: x[0])
-    return ranked[:5]
+    if limit:
+        return ranked[:limit]
+    return ranked
 
 
 def graphql_request(query, variables=None):
@@ -359,7 +361,8 @@ def search_candidates(title):
     return []
 
 
-def search_anime(title):
+def search_anime(title, candidate_handler=None):
+    user_title = title
     if title in SEARCH_CACHE:
         return SEARCH_CACHE[title]
 
@@ -499,6 +502,17 @@ def search_anime(title):
                 continue
 
             all_candidates[anime["id"]] = anime
+
+    if all_candidates and candidate_handler:
+        choice = candidate_handler(all_candidates, title)
+        if choice:
+            save_alias(user_title, choice)
+            SEARCH_CACHE[user_title] = choice
+            save_cache()
+            return choice
+        SEARCH_CACHE[user_title] = None
+        save_cache()
+        return None
 
     if all_candidates:
         top = rank_candidates(all_candidates, title)
@@ -756,6 +770,9 @@ def get_completed_anime(force_refresh: bool = False):
               seasonYear
               season
               averageScore
+              coverImage {
+                medium
+              }
               studios {
                 nodes {
                   name
@@ -805,6 +822,7 @@ def get_completed_anime(force_refresh: bool = False):
                 if isinstance(s, dict) and s.get("name")
             ]
 
+            cover = media.get("coverImage") or {}
             anime.append({
                 "id": media_id,
                 "idMal": media.get("idMal"),
@@ -814,6 +832,7 @@ def get_completed_anime(force_refresh: bool = False):
                     or title.get("native")
                     or "Unknown title"
                 ),
+                "cover_image": cover.get("medium") or "",
                 "episodes": media.get("episodes"),
                 "season_year": media.get("seasonYear"),
                 "season": media.get("season"),
@@ -863,5 +882,24 @@ def find_similar_aliases(title, limit=5):
         })
 
     return results
+
+
+def search_all(title: str) -> list[dict]:
+    query = """
+    query ($search: String, $perPage: Int) {
+      Page(page: 1, perPage: $perPage) {
+        media(search: $search, type: ANIME, sort: START_DATE) {
+          id idMal episodes status
+          title { romaji english native }
+          type averageScore startDate { year month day }
+        }
+      }
+    }
+    """
+    variables = {"search": title, "perPage": SETTINGS.get("anilist_per_page", 10)}
+    data = graphql_request(query, variables)
+    if "errors" in data:
+        return []
+    return data.get("data", {}).get("Page", {}).get("media", [])
 
 

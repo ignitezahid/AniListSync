@@ -102,6 +102,7 @@ class Plugin:
 
     def _apply(self, name: str):
         self.settings[ACTIVE_KEY] = name
+        self.settings["bg"] = THEMES.get(name, {}).get("bg", "#1a1b26")
         self.save_settings()
         from utils.ui import reload_theme
         reload_theme()

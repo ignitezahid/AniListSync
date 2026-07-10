@@ -12,6 +12,12 @@ import warnings  # noqa: E402
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ProactorBasePipeTransport.*")
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed transport.*")
 
+# Launch Desktop GUI if --gui flag is passed
+if "--gui" in sys.argv:
+    from gui.app import launch_gui
+    launch_gui()
+    sys.exit(0)
+
 from telegram_client import client, init_accounts, ensure_connected, disconnect_client  # noqa: E402
 from sync import main as sync_main  # noqa: E402
 from menu import show_dashboard, show_main_menu  # noqa: E402

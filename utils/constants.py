@@ -19,3 +19,8 @@ SETTINGS_FILE = "settings.json"
 ALIASES_FILE = "aliases.json"
 
 CACHE_FILE = "search_cache.json"
+
+STATE_FILE = "state.json"
+COLLECTIONS_FILE = "collections.json"
+TG_STATUS_FILE = "tg_status.json"
+COVER_CACHE_DIR = "cover_cache"

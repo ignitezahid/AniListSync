@@ -573,7 +573,7 @@ async def _handle_new_message(event, source_key: str):
     save_resume(event.id, source_key)
 
 
-async def main() -> None:
+async def main(gui_mode: bool = False) -> None:
     global completed_ids, mal_completed_ids, processed_titles, _importing
 
     sync_start = time_module.time()
@@ -673,6 +673,9 @@ async def main() -> None:
         pass
 
     plugin_manager.call_hook("on_sync_finish")
+
+    if gui_mode:
+        return
 
     _register_watchers()
 

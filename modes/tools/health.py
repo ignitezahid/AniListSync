@@ -337,6 +337,43 @@ def library_health():
 
     plugin_manager.call_hook("on_health_scan")
 
+    _interactive_loop(pct, groups, issues)
+
+
+def library_health_text() -> str:
+    """Run health check and return formatted output as plain text (no interactive loop).
+    Safe to call from a background thread."""
+    pct, groups, issues = _compute_health_score()
+    # Save health_pct to state and notify plugins (same as library_health() does)
+    try:
+        with open("state.json", encoding="utf-8") as f:
+            state = json.load(f)
+        state["health_pct"] = pct
+        with open("state.json", "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except Exception:
+        pass
+    plugin_manager.call_hook("on_health_scan")
+    lines = []
+    color = "🟢" if pct >= 80 else ("🟡" if pct >= 50 else "🔴")
+    lines.append(f"Library Health — {pct}% {color}")
+    lines.append("")
+    for group_name, items in groups:
+        lines.append(f"  {group_name}")
+        lines.append("  " + "─" * 40)
+        for name, status in items:
+            lines.append(f"    {status}  {name}")
+        lines.append("")
+    if issues:
+        lines.append("  Suggestions")
+        lines.append("  " + "─" * 40)
+        for issue in issues:
+            lines.append(f"    {issue}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _interactive_loop(pct, groups, issues):
     while True:
         if issues:
             print("Suggestions")
