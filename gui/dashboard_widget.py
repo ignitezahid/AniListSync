@@ -336,7 +336,9 @@ class DashboardWidget(QWidget):
     def _bg_refresh(self):
         def run():
             try:
-                anilist_ok, anilist_user = True, str(test_anilist()) if test_anilist() else ""
+                result = test_anilist()
+                anilist_ok = bool(result)
+                anilist_user = str(result) if result else ""
             except Exception:
                 anilist_ok, anilist_user = False, ""
             try:
